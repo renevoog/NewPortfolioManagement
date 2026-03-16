@@ -17,6 +17,7 @@ router.get('/home', ensureAuthenticated, controller.new_homeController_GET);
 router.get('/api/dashboard-data', ensureAuthenticated, controller.new_dashboardDataController_GET);
 router.post('/add-symbol', ensureAuthenticated, controller.new_addSymbolController_POST);
 router.post('/delete-symbol', ensureAuthenticated, controller.new_deleteSymbolController_POST);
+router.get('/api/assets/:symbol/financial-history', ensureAuthenticated, controller.new_financialHistoryController_GET);
 router.get('/debug/stocks', ensureAuthenticated, controller.new_debugStocksController_GET);
 
 router.get('/health/db', controller.new_dbHealthController_GET);

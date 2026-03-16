@@ -444,6 +444,150 @@ main.container-lg {
   }
 }
 
+/* --- Expand column & button -------------------------------- */
+.col-expand {
+  width: 32px;
+  padding: 0 !important;
+}
+
+.btn-expand {
+  background: none;
+  border: none;
+  color: #94a3b8;
+  cursor: pointer;
+  font-size: 0.78rem;
+  padding: 6px 8px;
+  line-height: 1;
+  transition: color .15s, transform .2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.btn-expand:hover { color: var(--accent); }
+.btn-expand.expanded { color: var(--accent); }
+.btn-expand.expanded i { transform: rotate(90deg); }
+.btn-expand i { transition: transform .2s ease; display: block; }
+
+/* --- Detail row & panel ------------------------------------ */
+.detail-row > td {
+  padding: 0 !important;
+  border-bottom: 1px solid var(--border);
+  background: #f8fafc;
+}
+
+.detail-panel {
+  padding: 20px 24px 24px;
+}
+
+.detail-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.detail-title {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+}
+
+.detail-title-text {
+  font-weight: 600;
+  font-size: 0.92rem;
+  color: var(--text);
+}
+
+.detail-source {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  font-weight: 400;
+  text-transform: capitalize;
+}
+
+/* --- Toggle buttons ---------------------------------------- */
+.detail-toggle {
+  display: flex;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.toggle-btn {
+  background: var(--card-bg);
+  border: none;
+  padding: 5px 14px;
+  font-family: inherit;
+  font-size: 0.76rem;
+  font-weight: 500;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: background .15s, color .15s;
+}
+.toggle-btn:not(:last-child) {
+  border-right: 1px solid var(--border);
+}
+.toggle-btn:hover {
+  background: #f1f5f9;
+}
+.toggle-btn.toggle-active {
+  background: var(--navy);
+  color: #fff;
+}
+
+/* --- Chart wrapper ----------------------------------------- */
+.detail-chart-wrap {
+  position: relative;
+  height: 260px;
+  width: 100%;
+}
+
+/* --- Detail loader (inline, smaller) ----------------------- */
+.detail-loader {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 0;
+}
+
+.loader-dots-sm span {
+  width: 9px;
+  height: 9px;
+}
+
+.detail-loader-text {
+  margin-top: 14px;
+  color: var(--text-muted);
+  font-size: 0.82rem;
+  font-weight: 400;
+}
+
+/* --- Empty / error state ----------------------------------- */
+.detail-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 0;
+  color: var(--text-muted);
+}
+.detail-empty i {
+  font-size: 1.6rem;
+  margin-bottom: 8px;
+  opacity: 0.5;
+}
+.detail-empty p {
+  font-size: 0.84rem;
+  margin: 0;
+}
+.detail-error i {
+  color: var(--red);
+  opacity: 0.7;
+}
+
 /* --- No-data row ------------------------------------------- */
 .no-data {
   text-align: center;
@@ -474,5 +618,18 @@ main.container-lg {
   .auth-card {
     margin: 20px 16px;
     padding: 28px 24px;
+  }
+
+  .detail-panel {
+    padding: 14px 12px 18px;
+  }
+
+  .detail-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .detail-chart-wrap {
+    height: 220px;
   }
 }

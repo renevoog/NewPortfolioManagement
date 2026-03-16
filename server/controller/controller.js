@@ -4,6 +4,7 @@ const mongoose = require('mongoose');
 const connectionToTheDatabase = require('../database/database');
 const { getStockRows } = require('../services/stockAggregator');
 const { getTrackedSymbols, initializeTrackedAssets, addSymbol, removeSymbol } = require('../services/trackedAssetsService');
+const { getFinancialHistory } = require('../services/yahoo/yahooFinancialService');
 
 //Load userModel
 const { userModel } = require('../model/models');
@@ -200,6 +201,36 @@ exports.new_debugStocksController_GET = async(req, res, next) => {
   } catch (err) {
     console.log('Debug error:', err.message);
     res.status(500).json({ error: err.message });
+  }
+};
+
+// GET /api/assets/:symbol/financial-history — lazy-loaded financial detail
+exports.new_financialHistoryController_GET = async(req, res, next) => {
+  try {
+    const symbol = req.params.symbol;
+    if (!symbol || !symbol.trim()) {
+      return res.status(400).json({ error: 'Symbol is required.' });
+    }
+
+    const data = await getFinancialHistory(symbol.trim());
+    res.json(data);
+  } catch (err) {
+    console.log('Financial history error for', req.params.symbol + ':', err.message);
+
+    // 404 typically means ETF/index/fund — no income statements available
+    const is404 = err.message && err.message.indexOf('404') !== -1;
+    const msg = is404
+      ? 'No financial history available for this asset.'
+      : 'Failed to load financial history.';
+
+    res.status(is404 ? 200 : 500).json({
+      symbol: req.params.symbol,
+      source: 'yahoo',
+      availability: { quarterly: false, yearly: false },
+      quarterly: { periods: [] },
+      yearly: { periods: [] },
+      error: msg
+    });
   }
 };
 

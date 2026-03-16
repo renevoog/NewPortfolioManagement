@@ -72,7 +72,7 @@
     if (!tbody) return;
 
     if (!data.length) {
-      tbody.innerHTML = '<tr><td colspan="11" class="no-data">No matching assets</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="12" class="no-data">No matching assets</td></tr>';
       if (countEl) countEl.textContent = '0 assets';
       return;
     }
@@ -80,8 +80,10 @@
     var html = '';
     for (var i = 0; i < data.length; i++) {
       var r = data[i];
-      html += '<tr>'
-        + '<td class="col-sym"><a class="sym-link" href="' + tvUrl(r.symbol) + '" target="_blank" rel="noopener">' + esc(r.symbol) + '</a></td>'
+      var safeSymbol = esc(r.symbol);
+      html += '<tr class="asset-row" data-symbol="' + safeSymbol + '">'
+        + '<td class="col-expand"><button class="btn-expand" data-symbol="' + safeSymbol + '" title="Show financial details"><i class="bi bi-chevron-right"></i></button></td>'
+        + '<td class="col-sym"><a class="sym-link" href="' + tvUrl(r.symbol) + '" target="_blank" rel="noopener">' + safeSymbol + '</a></td>'
         + '<td>' + esc(r.companyName) + '</td>'
         + '<td class="col-num">' + esc(r.marketCap) + '</td>'
         + '<td class="col-num">' + esc(r.lastPrice) + '</td>'
@@ -91,7 +93,10 @@
         + '<td class="col-num">' + esc(r.targetPrice) + '</td>'
         + '<td>' + esc(r.rating) + '</td>'
         + '<td>' + esc(r.updateTime) + '</td>'
-        + '<td><button class="btn-delete" title="Remove ' + esc(r.symbol) + '" onclick="window.__deleteSymbol(\'' + esc(r.symbol) + '\')"><i class="bi bi-trash3"></i></button></td>'
+        + '<td><button class="btn-delete" title="Remove ' + safeSymbol + '" onclick="window.__deleteSymbol(\'' + esc(r.symbol) + '\')"><i class="bi bi-trash3"></i></button></td>'
+        + '</tr>'
+        + '<tr class="detail-row" id="detail-' + safeSymbol + '" style="display:none;">'
+        + '<td colspan="12"><div class="detail-panel" id="panel-' + safeSymbol + '"></div></td>'
         + '</tr>';
     }
     tbody.innerHTML = html;
