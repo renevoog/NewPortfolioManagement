@@ -38,6 +38,21 @@
     return val.toLocaleString();
   }
 
+  // ---- Format a percentage change for display ----------------
+  function fmtChange(val) {
+    if (val === null || val === undefined) return null;
+    var sign = val > 0 ? '+' : '';
+    return sign + val.toFixed(1) + '%';
+  }
+
+  // ---- CSS class for a change value --------------------------
+  function changeColorClass(val) {
+    if (val === null || val === undefined) return '';
+    if (val > 0.05) return 'chg-pos';
+    if (val < -0.05) return 'chg-neg';
+    return 'chg-neutral';
+  }
+
   // ---- Loading spinner HTML (same design language) -----------
   function loaderHTML() {
     return '<div class="detail-loader">'
@@ -64,12 +79,53 @@
       + '</div>';
   }
 
+  // ---- Get the active periods for a view ---------------------
+  function getPeriods(data, view) {
+    return (view === 'yearly' && data.yearly)
+      ? data.yearly.periods
+      : data.quarterly.periods;
+  }
+
+  // ---- Build latest-period summary HTML ----------------------
+  function latestSummaryHTML(periods) {
+    if (!periods || periods.length < 2) return '';
+
+    var latest = periods[periods.length - 1];
+    var revChg = fmtChange(latest.revenueChange);
+    var niChg = fmtChange(latest.netIncomeChange);
+
+    // Only show if at least one change value exists
+    if (!revChg && !niChg) return '';
+
+    var html = '<div class="detail-summary">';
+    html += '<span class="detail-summary-label">' + esc(latest.label) + ' vs prev:</span>';
+
+    if (revChg) {
+      html += '<span class="detail-summary-item">'
+        + '<span class="detail-summary-metric">Revenue</span> '
+        + '<span class="' + changeColorClass(latest.revenueChange) + '">' + revChg + '</span>'
+        + '</span>';
+    }
+
+    if (niChg) {
+      html += '<span class="detail-summary-item">'
+        + '<span class="detail-summary-metric">Net income</span> '
+        + '<span class="' + changeColorClass(latest.netIncomeChange) + '">' + niChg + '</span>'
+        + '</span>';
+    }
+
+    html += '</div>';
+    return html;
+  }
+
   // ---- Build chart panel HTML --------------------------------
-  function panelHTML(symbol, data) {
+  function panelHTML(symbol, data, view) {
     var hasQ = data.availability && data.availability.quarterly;
     var hasY = data.availability && data.availability.yearly;
 
     if (!hasQ && !hasY) return emptyHTML();
+
+    var periods = getPeriods(data, view);
 
     var html = '<div class="detail-header">'
       + '<div class="detail-title">'
@@ -79,18 +135,29 @@
 
     // Toggle only if both views available
     if (hasQ && hasY) {
+      var qActive = view !== 'yearly' ? ' toggle-active' : '';
+      var yActive = view === 'yearly' ? ' toggle-active' : '';
       html += '<div class="detail-toggle">'
-        + '<button class="toggle-btn toggle-active" data-view="quarterly" data-symbol="' + symbol + '">Quarterly</button>'
-        + '<button class="toggle-btn" data-view="yearly" data-symbol="' + symbol + '">Yearly</button>'
+        + '<button class="toggle-btn' + qActive + '" data-view="quarterly" data-symbol="' + symbol + '">Quarterly</button>'
+        + '<button class="toggle-btn' + yActive + '" data-view="yearly" data-symbol="' + symbol + '">Yearly</button>'
         + '</div>';
     }
 
-    html += '</div>'
-      + '<div class="detail-chart-wrap">'
+    html += '</div>';
+
+    // Compact latest-period summary
+    html += latestSummaryHTML(periods);
+
+    html += '<div class="detail-chart-wrap">'
       + '<canvas id="chart-' + symbol + '"></canvas>'
       + '</div>';
 
     return html;
+  }
+
+  function esc(s) {
+    if (s === null || s === undefined) return '-';
+    return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
   }
 
   // ---- Render or update chart --------------------------------
@@ -98,10 +165,7 @@
     var canvas = document.getElementById('chart-' + symbol);
     if (!canvas) return;
 
-    var periods = (view === 'yearly' && data.yearly)
-      ? data.yearly.periods
-      : data.quarterly.periods;
-
+    var periods = getPeriods(data, view);
     if (!periods || !periods.length) return;
 
     var labels = periods.map(function (p) { return p.label; });
@@ -167,6 +231,7 @@
             bodyFont: { family: "'Exo', sans-serif", size: 12 },
             cornerRadius: 6,
             padding: 12,
+            boxPadding: 4,
             callbacks: {
               title: function (items) {
                 if (!items.length) return '';
@@ -177,8 +242,27 @@
                 return title;
               },
               label: function (item) {
+                var idx = item.dataIndex;
+                var period = periods[idx];
                 var val = item.raw;
-                return ' ' + item.dataset.label + ': ' + fullValue(val);
+                var line = ' ' + item.dataset.label + ': ' + fullValue(val);
+                return line;
+              },
+              afterLabel: function (item) {
+                var idx = item.dataIndex;
+                var period = periods[idx];
+
+                // Determine which change field to show
+                var change = null;
+                if (item.datasetIndex === 0) {
+                  change = period.revenueChange;
+                } else if (item.datasetIndex === 1) {
+                  change = period.netIncomeChange;
+                }
+
+                var formatted = fmtChange(change);
+                if (!formatted) return '';
+                return '    vs prev: ' + formatted;
               }
             }
           }
@@ -213,19 +297,16 @@
     var view = btn.getAttribute('data-view');
     if (!symbol || !view) return;
 
-    // Update active class
-    var parent = btn.parentElement;
-    var buttons = parent.querySelectorAll('.toggle-btn');
-    for (var i = 0; i < buttons.length; i++) {
-      buttons[i].classList.remove('toggle-active');
-    }
-    btn.classList.add('toggle-active');
-
     activeView[symbol] = view;
 
-    // Re-render chart with cached data
+    // Re-render entire panel (including updated summary) with cached data
     if (cache[symbol]) {
-      renderChart(symbol, cache[symbol], view);
+      var panel = document.getElementById('panel-' + symbol);
+      if (panel) {
+        panel.innerHTML = panelHTML(symbol, cache[symbol], view);
+        renderChart(symbol, cache[symbol], view);
+        attachToggleListeners(panel);
+      }
     }
   }
 
@@ -252,8 +333,8 @@
 
     // If data is cached, render immediately
     if (cache[symbol]) {
-      panel.innerHTML = panelHTML(symbol, cache[symbol]);
       var view = activeView[symbol] || 'quarterly';
+      panel.innerHTML = panelHTML(symbol, cache[symbol], view);
       renderChart(symbol, cache[symbol], view);
       attachToggleListeners(panel);
       return;
@@ -277,7 +358,7 @@
         }
 
         activeView[symbol] = 'quarterly';
-        panel.innerHTML = panelHTML(symbol, data);
+        panel.innerHTML = panelHTML(symbol, data, 'quarterly');
         renderChart(symbol, data, 'quarterly');
         attachToggleListeners(panel);
       })

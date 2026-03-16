@@ -601,6 +601,40 @@ main.container-lg {
   color: #fff;
 }
 
+/* --- Latest period summary --------------------------------- */
+.detail-summary {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 12px;
+  padding: 6px 10px;
+  background: #f8fafc;
+  border-radius: 5px;
+  font-size: 0.76rem;
+  flex-wrap: wrap;
+}
+
+.detail-summary-label {
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+.detail-summary-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.detail-summary-metric {
+  color: var(--text-muted);
+  font-weight: 400;
+}
+
+/* Change colors — restrained, professional */
+.chg-pos { color: #16a34a; font-weight: 600; }
+.chg-neg { color: #dc2626; font-weight: 600; }
+.chg-neutral { color: var(--text-muted); font-weight: 500; }
+
 /* --- Chart wrapper ----------------------------------------- */
 .detail-chart-wrap {
   position: relative;

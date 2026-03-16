@@ -59,6 +59,53 @@ const sortPeriods = (periods) => {
 };
 
 /**
+ * Calculate period-over-period % change for revenue and netIncome.
+ * Mutates the array in-place, adding revenueChange and netIncomeChange fields.
+ *
+ * Rules:
+ *   - First period: null (no previous to compare)
+ *   - Previous value is null: null
+ *   - Previous value is 0: null (avoid division by zero)
+ *   - Net income sign crossover (prev negative, current positive or vice versa):
+ *     still calculate, but if previous is very close to zero (abs < 1000),
+ *     return null to avoid misleading huge percentages
+ */
+const addPeriodChanges = (periods) => {
+  for (let i = 0; i < periods.length; i++) {
+    if (i === 0) {
+      periods[i].revenueChange = null;
+      periods[i].netIncomeChange = null;
+      continue;
+    }
+
+    periods[i].revenueChange = safePercentChange(
+      periods[i].revenue, periods[i - 1].revenue
+    );
+    periods[i].netIncomeChange = safePercentChange(
+      periods[i].netIncome, periods[i - 1].netIncome
+    );
+  }
+  return periods;
+};
+
+/**
+ * Safe percentage change: ((current - previous) / |previous|) * 100
+ * Uses absolute value of previous to keep sign direction meaningful
+ * even when previous is negative.
+ *
+ * Returns null for:
+ *   - missing values
+ *   - previous is zero or near-zero (abs < 1000)
+ */
+const safePercentChange = (current, previous) => {
+  if (current === null || current === undefined) return null;
+  if (previous === null || previous === undefined) return null;
+  if (Math.abs(previous) < 1000) return null; // near-zero guard
+
+  return ((current - previous) / Math.abs(previous)) * 100;
+};
+
+/**
  * Fetch financial history for a single TradingView symbol.
  * Returns a normalized JSON payload with quarterly + yearly data.
  *
@@ -86,13 +133,13 @@ const getFinancialHistory = async (tvSymbol) => {
     && summary.incomeStatementHistoryQuarterly.incomeStatementHistory;
   const quarterlyStatements = Array.isArray(quarterlyRaw) ? quarterlyRaw : [];
 
-  // Normalize
-  const quarterlyPeriods = sortPeriods(
+  // Normalize, sort chronologically, then compute period-over-period changes
+  const quarterlyPeriods = addPeriodChanges(sortPeriods(
     quarterlyStatements.map((e) => normalizeEntry(e, quarterLabel))
-  );
-  const yearlyPeriods = sortPeriods(
+  ));
+  const yearlyPeriods = addPeriodChanges(sortPeriods(
     annualStatements.map((e) => normalizeEntry(e, yearLabel))
-  );
+  ));
 
   // Determine availability — must have at least 1 period with revenue data
   const hasQuarterly = quarterlyPeriods.some((p) => p.revenue !== null);
