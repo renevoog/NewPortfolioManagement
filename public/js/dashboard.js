@@ -14,6 +14,7 @@
   var content = document.getElementById('dashboard-content');
   var errorMsg = document.getElementById('error-msg');
   var addForm = document.getElementById('add-form');
+  var refreshTimeEl = document.getElementById('refresh-time');
 
   var currentSort = { col: null, dir: null };
 
@@ -67,6 +68,44 @@
     return 'https://www.tradingview.com/symbols/' + encodeURIComponent(symbol) + '/';
   }
 
+  // ---- Build event cell HTML --------------------------------
+  function eventCell(ev) {
+    if (!ev) return '<td class="col-event"><span class="event-none">-</span></td>';
+
+    var icon, badgeClass, typeLabel, tooltip;
+
+    if (ev.type === 'earnings') {
+      if (ev.isPast) {
+        icon = 'bi-calendar-check';
+        badgeClass = 'event-past';
+        typeLabel = 'Reported';
+      } else if (ev.daysUntil <= 7) {
+        icon = 'bi-calendar-event-fill';
+        badgeClass = 'event-soon';
+        typeLabel = 'Earnings';
+      } else {
+        icon = 'bi-calendar-event';
+        badgeClass = 'event-upcoming';
+        typeLabel = 'Earnings';
+      }
+    } else {
+      icon = 'bi-calendar';
+      badgeClass = 'event-upcoming';
+      typeLabel = 'Event';
+    }
+
+    // Build tooltip: type + exact date + estimate flag
+    tooltip = typeLabel + ': ' + esc(ev.tooltipDate || ev.displayDate || '');
+    if (ev.isEstimate) tooltip += ' (est.)';
+
+    return '<td class="col-event">'
+      + '<span class="event-badge ' + badgeClass + '" title="' + esc(tooltip) + '">'
+      + '<i class="bi ' + icon + '"></i> '
+      + esc(ev.label)
+      + '</span>'
+      + '</td>';
+  }
+
   // ---- Render rows ------------------------------------------
   function render(data) {
     if (!tbody) return;
@@ -92,7 +131,7 @@
         + '<td class="col-num">' + esc(r.beta) + '</td>'
         + '<td class="col-num">' + esc(r.targetPrice) + '</td>'
         + '<td>' + esc(r.rating) + '</td>'
-        + '<td>' + esc(r.updateTime) + '</td>'
+        + eventCell(r.event)
         + '<td><button class="btn-delete" title="Remove ' + safeSymbol + '" onclick="window.__deleteSymbol(\'' + esc(r.symbol) + '\')"><i class="bi bi-trash3"></i></button></td>'
         + '</tr>'
         + '<tr class="detail-row" id="detail-' + safeSymbol + '" style="display:none;">'
@@ -230,7 +269,6 @@
         .then(function (data) {
           if (data.success) {
             input.value = '';
-            // Reload to get fresh data with the new symbol
             window.location.reload();
           } else {
             showError(data.error || 'Failed to add symbol.');
@@ -246,7 +284,6 @@
   var urlParams = new URLSearchParams(window.location.search);
   var urlError = urlParams.get('error');
   if (urlError) {
-    // Clean the URL
     window.history.replaceState({}, '', window.location.pathname);
     showError(urlError);
   }
@@ -258,6 +295,10 @@
       rows = data.rows || [];
       if (data.error) {
         showError(data.error);
+      }
+      // Show global refresh timestamp in status bar
+      if (data.refreshTime && refreshTimeEl) {
+        refreshTimeEl.textContent = 'Last refreshed: ' + data.refreshTime;
       }
       refresh();
       dismissLoader();

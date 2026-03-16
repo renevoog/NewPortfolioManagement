@@ -142,10 +142,11 @@ exports.new_dashboardDataController_GET = async(req, res, next) => {
     const trackedSymbols = await getTrackedSymbols(userId);
     const rows = await getStockRows(trackedSymbols);
 
-    res.json({ rows: rows });
+    const { formatEstoniaTime } = require('../services/formatters');
+    res.json({ rows: rows, refreshTime: formatEstoniaTime(new Date()) });
   } catch (err) {
     console.log('Dashboard data error:', err.message);
-    res.json({ rows: [], error: 'Failed to load dashboard data.' });
+    res.json({ rows: [], error: 'Failed to load dashboard data.', refreshTime: null });
   }
 };
 

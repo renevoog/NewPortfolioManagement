@@ -2,6 +2,7 @@ const { resolveInstruments, getRatesForInstrumentIds, getInstrumentDetails } = r
 const { batchQuotes, batchAnalystData } = require('./yahoo/yahooStockService');
 const { getYahooSymbol } = require('./symbolMap');
 const { formatMarketCap, formatPrice, formatDailyChange, formatPercent, formatBeta, formatTargetPrice, formatEstoniaTime } = require('./formatters');
+const { buildEarningsEvent } = require('./eventService');
 
 // Build a mapping of tvSymbol -> yahooSymbol for a list of TV symbols
 const buildYahooMap = (tvSymbols) => {
@@ -61,6 +62,7 @@ const getStockRows = async (tvSymbols) => {
     const etoro = etoroData[tvSymbol] || null;
 
     const raw = extractRawValues(yQuote, yAnalyst, etoro);
+    const event = buildEarningsEvent(yQuote, now);
 
     return {
       symbol: tvSymbol,
@@ -72,7 +74,7 @@ const getStockRows = async (tvSymbols) => {
       beta: formatBeta(raw.beta),
       targetPrice: formatTargetPrice(raw.targetPrice, raw.currency),
       rating: raw.rating || '-',
-      updateTime: formatEstoniaTime(now)
+      event: event
     };
   });
 };

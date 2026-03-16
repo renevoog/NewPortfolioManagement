@@ -260,6 +260,70 @@ main.container-lg {
 .change-pos { color: var(--green); font-weight: 500; }
 .change-neg { color: var(--red); font-weight: 500; }
 
+/* --- Events column ----------------------------------------- */
+.col-event {
+  white-space: nowrap;
+  font-size: 0.8rem;
+}
+
+.event-none {
+  color: var(--text-muted);
+  opacity: 0.5;
+}
+
+.event-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  border-radius: 4px;
+  font-size: 0.76rem;
+  font-weight: 500;
+  line-height: 1.3;
+  cursor: default;
+  transition: background .12s;
+}
+
+.event-badge i {
+  font-size: 0.72rem;
+}
+
+/* Upcoming (>7 days) — subtle blue-grey */
+.event-upcoming {
+  color: #475569;
+  background: #f1f5f9;
+}
+.event-upcoming:hover {
+  background: #e2e8f0;
+}
+.event-upcoming i {
+  color: var(--accent);
+}
+
+/* Soon (<=7 days) — accent warm */
+.event-soon {
+  color: #92400e;
+  background: #fef3c7;
+}
+.event-soon:hover {
+  background: #fde68a;
+}
+.event-soon i {
+  color: #d97706;
+}
+
+/* Past / reported — muted */
+.event-past {
+  color: var(--text-muted);
+  background: #f8fafc;
+}
+.event-past:hover {
+  background: #f1f5f9;
+}
+.event-past i {
+  color: #94a3b8;
+}
+
 /* Delete button */
 .btn-delete {
   background: none;
