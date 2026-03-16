@@ -3,14 +3,14 @@ const bcrypt = require('bcryptjs');
 const mongoose = require('mongoose');
 const connectionToTheDatabase = require('../database/database');
 const { getStockRows } = require('../services/stockAggregator');
-const { getTrackedSymbols, initializeTrackedAssets, addSymbol } = require('../services/trackedAssetsService');
+const { getTrackedSymbols, initializeTrackedAssets, addSymbol, removeSymbol } = require('../services/trackedAssetsService');
 
 //Load userModel
 const { userModel } = require('../model/models');
 
 exports.new_loginController_GET = async(req, res, next) => {
   try {
-    res.render('login');
+    res.render('login', { userName: null, pageTitle: 'Login' });
   } catch (err) {
     return next(err);
   }
@@ -44,7 +44,7 @@ exports.new_logoutController_GET = async(req, res) => {
 
 exports.new_registrationController_GET = async(req, res, next) => {
   try {
-    res.render('register');
+    res.render('register', { userName: null, pageTitle: 'Register' });
   } catch (err) {
     return next(err);
   }
@@ -70,7 +70,9 @@ exports.new_registrationController_POST = async(req, res, next) => {
     res.render('register', {
       errors: errors,
       name: name,
-      email: email
+      email: email,
+      userName: null,
+      pageTitle: 'Register'
     });
   } else {
     userModel.findOne({ email: email })
@@ -82,7 +84,9 @@ exports.new_registrationController_POST = async(req, res, next) => {
             name: name,
             email: email,
             password: password,
-            password2: password2
+            password2: password2,
+            userName: null,
+            pageTitle: 'Register'
           });
         } else {
           const newUser = new userModel({
@@ -116,33 +120,35 @@ exports.new_registrationController_POST = async(req, res, next) => {
   }
 };
 
+// GET /home — renders the shell instantly (spinner visible), data loaded via AJAX
 exports.new_homeController_GET = async(req, res, next) => {
   try {
-    const userId = req.session.passport.user;
-
-    // Initialize tracked assets for this user (seeds initial list on first visit)
-    await initializeTrackedAssets(userId);
-
-    // Get the user's tracked symbols
-    const trackedSymbols = await getTrackedSymbols(userId);
-
-    // Fetch all stock data
-    const rows = await getStockRows(trackedSymbols);
-
     res.render('home', {
-      rows: rows,
-      error: null
+      userName: req.user ? req.user.name : null,
+      pageTitle: 'Dashboard'
     });
   } catch (err) {
-    console.log('Dashboard error:', err.message);
-    res.render('home', {
-      rows: [],
-      error: 'Failed to load dashboard data. Please refresh.'
-    });
+    return next(err);
   }
 };
 
-// POST: Add a new symbol
+// GET /api/dashboard-data — returns JSON rows (called by client JS)
+exports.new_dashboardDataController_GET = async(req, res, next) => {
+  try {
+    const userId = req.session.passport.user;
+
+    await initializeTrackedAssets(userId);
+    const trackedSymbols = await getTrackedSymbols(userId);
+    const rows = await getStockRows(trackedSymbols);
+
+    res.json({ rows: rows });
+  } catch (err) {
+    console.log('Dashboard data error:', err.message);
+    res.json({ rows: [], error: 'Failed to load dashboard data.' });
+  }
+};
+
+// POST: Add a new symbol (returns JSON for fetch, or redirects for form submit)
 exports.new_addSymbolController_POST = async(req, res, next) => {
   try {
     const userId = req.session.passport.user;
@@ -150,20 +156,35 @@ exports.new_addSymbolController_POST = async(req, res, next) => {
 
     const result = await addSymbol(userId, symbol);
 
-    if (!result.success) {
-      // Re-render dashboard with error
-      const trackedSymbols = await getTrackedSymbols(userId);
-      const rows = await getStockRows(trackedSymbols);
-
-      return res.render('home', {
-        rows: rows,
-        error: result.error
-      });
+    if (req.headers['x-requested-with'] === 'fetch') {
+      return res.json(result);
     }
 
+    // Fallback: form submit — redirect with error in query if failed
+    if (!result.success) {
+      return res.redirect('/home?error=' + encodeURIComponent(result.error));
+    }
     res.redirect('/home');
   } catch (err) {
     console.log('Add symbol error:', err.message);
+    return next(err);
+  }
+};
+
+// POST: Delete a symbol (supports both fetch and form submit)
+exports.new_deleteSymbolController_POST = async(req, res, next) => {
+  try {
+    const userId = req.session.passport.user;
+    const { symbol } = req.body;
+    await removeSymbol(userId, symbol);
+
+    // If called via fetch (no redirect expected), return JSON
+    if (req.headers['x-requested-with'] === 'fetch') {
+      return res.json({ success: true });
+    }
+    res.redirect('/home');
+  } catch (err) {
+    console.log('Delete symbol error:', err.message);
     return next(err);
   }
 };

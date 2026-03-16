@@ -1,57 +1,61 @@
-<!doctype html>
-<html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Stock Dashboard</title>
-  </head>
-  <body>
-    <h1>Stock Dashboard</h1>
+<%- include('partials/header') %>
 
-    <!-- Add Symbol Form -->
-    <form action="/add-symbol" method="POST" style="margin-bottom: 10px;">
-      <input type="text" name="symbol" placeholder="Enter TradingView symbol (e.g. AAPL, BRK.B, NYSE:TDY)" size="50" />
-      <button type="submit">Add</button>
-    </form>
-    <% if (error) { %>
-      <p style="color: red;"><%= error %></p>
-    <% } %>
+    <!-- Loading spinner (visible immediately) -->
+    <div id="loading-overlay" class="loading-overlay">
+      <div class="loader-container">
+        <div class="loader-dots">
+          <span></span><span></span><span></span><span></span>
+        </div>
+        <p class="loader-text">Fetching market data</p>
+      </div>
+    </div>
 
-    <!-- Stock Table -->
-    <table border="1" cellpadding="4" cellspacing="0">
-      <thead>
-        <tr>
-          <th>Symbol</th>
-          <th>CompanyName</th>
-          <th>MarketCap</th>
-          <th>LastPrice</th>
-          <th>DailyChange</th>
-          <th>DailyChange%</th>
-          <th>Beta</th>
-          <th>TargetPrice</th>
-          <th>Rating</th>
-          <th>UpdateTime</th>
-        </tr>
-      </thead>
-      <tbody>
-        <% (rows || []).forEach(function(row) { %>
-          <tr>
-            <td><%= row.symbol %></td>
-            <td><%= row.companyName %></td>
-            <td><%= row.marketCap %></td>
-            <td><%= row.lastPrice %></td>
-            <td><%= row.dailyChange %></td>
-            <td><%= row.dailyChangePct %></td>
-            <td><%= row.beta %></td>
-            <td><%= row.targetPrice %></td>
-            <td><%= row.rating %></td>
-            <td><%= row.updateTime %></td>
-          </tr>
-        <% }); %>
-      </tbody>
-    </table>
+    <!-- Dashboard content (hidden until data arrives) -->
+    <div id="dashboard-content" class="dashboard-content" style="display:none;">
 
-    <p><%= (rows || []).length %> assets tracked</p>
-    <a href="/logout">Logout</a>
-  </body>
-</html>
+      <!-- Toolbar: search + add -->
+      <div class="toolbar">
+        <div class="search-box">
+          <i class="bi bi-search"></i>
+          <input type="text" id="search-input" placeholder="Search symbol or name..." />
+        </div>
+        <form class="add-form" id="add-form">
+          <input type="text" name="symbol" id="add-symbol-input" placeholder="Add symbol (e.g. AAPL)" required />
+          <button type="submit" class="btn-add"><i class="bi bi-plus-lg"></i> Add</button>
+        </form>
+      </div>
+      <div id="error-msg" class="error-msg" style="display:none;"></div>
+
+      <!-- Table -->
+      <div class="table-card">
+        <div class="table-wrap">
+          <table class="stock-table">
+            <thead>
+              <tr>
+                <th>Symbol</th>
+                <th>Company</th>
+                <th class="sortable col-num" data-col="marketCap">Mkt Cap</th>
+                <th class="col-num">Price</th>
+                <th class="sortable col-num" data-col="dailyChange">Change</th>
+                <th class="sortable col-num" data-col="dailyChangePct">Change%</th>
+                <th class="sortable col-num" data-col="beta">Beta</th>
+                <th class="col-num">Target</th>
+                <th>Rating</th>
+                <th>Updated</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="stock-tbody"></tbody>
+          </table>
+        </div>
+        <div class="status-bar">
+          <span id="row-count">0 assets</span>
+          <span>Data refreshes on page reload</span>
+        </div>
+      </div>
+
+    </div><!-- /dashboard-content -->
+
+    <script src="/js/dashboard.js"></script>
+
+<%- include('partials/footer') %>

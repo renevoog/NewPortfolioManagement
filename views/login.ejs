@@ -1,33 +1,47 @@
-<!doctype html>
-<html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Login</title>
-  </head>
-  <body>
-    <h1>Login</h1>
+<%- include('partials/header') %>
 
-    <% if (typeof success_msg !== 'undefined' && success_msg) { %>
-      <p><%= success_msg %></p>
-    <% } %>
-    <% if (typeof error_msg !== 'undefined' && error_msg) { %>
-      <p><%= error_msg %></p>
-    <% } %>
-    <% if (typeof error !== 'undefined' && error) { %>
-      <p><%= error %></p>
-    <% } %>
+    <div class="auth-wrapper">
+      <div class="auth-card">
+        <h1>Sign In</h1>
 
-    <form action="/login" method="POST">
-      <label for="email">Email</label>
-      <input id="email" name="email" type="email" required />
+        <% if (typeof success_msg !== 'undefined' && success_msg && success_msg.length) { %>
+          <div class="flash-msg flash-success"><%= success_msg %></div>
+        <% } %>
+        <% if (typeof error_msg !== 'undefined' && error_msg && error_msg.length) { %>
+          <div class="flash-msg flash-error"><%= error_msg %></div>
+        <% } %>
+        <% if (typeof error !== 'undefined' && error && error.length) { %>
+          <div class="flash-msg flash-error"><%= error %></div>
+        <% } %>
 
-      <label for="password">Password</label>
-      <input id="password" name="password" type="password" required />
+        <form id="login-form" action="/login" method="POST">
+          <label for="email">Email</label>
+          <input id="email" name="email" type="email" required autofocus />
 
-      <button type="submit">Login</button>
-    </form>
+          <label for="password">Password</label>
+          <input id="password" name="password" type="password" required />
 
-    <a href="/register">Register</a>
-  </body>
-</html>
+          <button type="submit" class="btn-primary" id="login-btn">Login</button>
+        </form>
+
+        <a class="auth-link" href="/register">Don't have an account? Register</a>
+      </div>
+    </div>
+
+    <!-- Loading overlay (shown on submit, covers the wait for dashboard API calls) -->
+    <div id="loading-overlay" class="loading-overlay" style="display:none;">
+      <div class="loader-container">
+        <div class="loader-dots">
+          <span></span><span></span><span></span><span></span>
+        </div>
+        <p class="loader-text">Fetching market data</p>
+      </div>
+    </div>
+
+    <script>
+      document.getElementById('login-form').addEventListener('submit', function () {
+        document.getElementById('loading-overlay').style.display = '';
+      });
+    </script>
+
+<%- include('partials/footer') %>

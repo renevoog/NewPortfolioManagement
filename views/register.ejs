@@ -1,35 +1,33 @@
-<!doctype html>
-<html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Register</title>
-  </head>
-  <body>
-    <h1>Register</h1>
+<%- include('partials/header') %>
 
-    <% if (typeof errors !== 'undefined' && errors.length > 0) { %>
-      <% errors.forEach(function(error) { %>
-        <p><%= error.msg %></p>
-      <% }) %>
-    <% } %>
+    <div class="auth-wrapper">
+      <div class="auth-card">
+        <h1>Register</h1>
 
-    <form action="/register" method="POST">
-      <label for="name">Name</label>
-      <input id="name" name="name" type="text" value="<%= typeof name !== 'undefined' ? name : '' %>" required />
+        <% if (typeof errors !== 'undefined' && errors && errors.length) { %>
+          <% errors.forEach(function(e) { %>
+            <div class="flash-msg flash-error"><%= e.msg %></div>
+          <% }); %>
+        <% } %>
 
-      <label for="email">Email</label>
-      <input id="email" name="email" type="email" value="<%= typeof email !== 'undefined' ? email : '' %>" required />
+        <form action="/register" method="POST">
+          <label for="name">Name</label>
+          <input id="name" name="name" type="text" value="<%= typeof name !== 'undefined' ? name : '' %>" required autofocus />
 
-      <label for="password">Password</label>
-      <input id="password" name="password" type="password" required />
+          <label for="email">Email</label>
+          <input id="email" name="email" type="email" value="<%= typeof email !== 'undefined' ? email : '' %>" required />
 
-      <label for="password2">Confirm Password</label>
-      <input id="password2" name="password2" type="password" required />
+          <label for="password">Password</label>
+          <input id="password" name="password" type="password" required />
 
-      <button type="submit">Register</button>
-    </form>
+          <label for="password2">Confirm Password</label>
+          <input id="password2" name="password2" type="password" required />
 
-    <a href="/login">Login</a>
-  </body>
-</html>
+          <button type="submit" class="btn-primary">Register</button>
+        </form>
+
+        <a class="auth-link" href="/login">Already have an account? Sign in</a>
+      </div>
+    </div>
+
+<%- include('partials/footer') %>
