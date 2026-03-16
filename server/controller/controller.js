@@ -230,6 +230,7 @@ exports.new_financialHistoryController_GET = async(req, res, next) => {
       availability: { quarterly: false, yearly: false },
       quarterly: { periods: [] },
       yearly: { periods: [] },
+      analystSummary: { available: false },
       error: msg
     });
   }

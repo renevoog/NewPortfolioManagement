@@ -118,39 +118,141 @@
     return html;
   }
 
+  // ---- Format currency value for analyst card -----------------
+  function fmtPrice(val) {
+    if (val === null || val === undefined) return '-';
+    return val.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+
+  // ---- Determine rating color class ---------------------------
+  function ratingColorClass(rating) {
+    if (!rating) return 'analyst-rating-neutral';
+    var r = rating.toLowerCase();
+    if (r.indexOf('buy') !== -1 || r.indexOf('outperform') !== -1 || r.indexOf('overweight') !== -1) return 'analyst-rating-buy';
+    if (r.indexOf('sell') !== -1 || r.indexOf('underperform') !== -1 || r.indexOf('underweight') !== -1) return 'analyst-rating-sell';
+    if (r.indexOf('hold') !== -1 || r.indexOf('neutral') !== -1) return 'analyst-rating-hold';
+    return 'analyst-rating-neutral';
+  }
+
+  // ---- Build analyst sentiment card HTML ----------------------
+  function analystCardHTML(a) {
+    if (!a || !a.available) return '';
+
+    var html = '<div class="analyst-card">';
+    html += '<div class="analyst-card-header">'
+      + '<span class="analyst-card-title">Analyst consensus</span>';
+    if (a.analystCount !== null) {
+      html += '<span class="analyst-card-count">' + a.analystCount + ' analyst' + (a.analystCount !== 1 ? 's' : '') + '</span>';
+    }
+    html += '</div>';
+
+    html += '<div class="analyst-grid">';
+
+    // Consensus rating
+    if (a.consensusRating) {
+      html += '<span class="analyst-label">Rating</span>'
+        + '<span class="analyst-value analyst-rating ' + ratingColorClass(a.consensusRating) + '">' + esc(a.consensusRating) + '</span>';
+    }
+
+    // Target price + implied upside
+    if (a.averageTargetPrice !== null) {
+      var upsideStr = '';
+      if (a.impliedUpsidePct !== null) {
+        var sign = a.impliedUpsidePct > 0 ? '+' : '';
+        var upsideClass = a.impliedUpsidePct >= 0 ? 'analyst-upside-pos' : 'analyst-upside-neg';
+        upsideStr = ' <span class="' + upsideClass + '">(' + sign + a.impliedUpsidePct.toFixed(1) + '%)</span>';
+      }
+      html += '<span class="analyst-label">Avg target</span>'
+        + '<span class="analyst-value">' + fmtPrice(a.averageTargetPrice) + upsideStr + '</span>';
+    }
+
+    // Target range
+    if (a.targetLow !== null && a.targetHigh !== null) {
+      html += '<span class="analyst-label">Range</span>'
+        + '<span class="analyst-value analyst-target-range">' + fmtPrice(a.targetLow) + ' — ' + fmtPrice(a.targetHigh) + '</span>';
+    }
+
+    // Current price
+    if (a.currentPrice !== null) {
+      html += '<span class="analyst-label">Current</span>'
+        + '<span class="analyst-value">' + fmtPrice(a.currentPrice) + '</span>';
+    }
+
+    // Buy / Hold / Sell distribution
+    if (a.buyCount !== null || a.holdCount !== null || a.sellCount !== null) {
+      var buy = a.buyCount || 0;
+      var hold = a.holdCount || 0;
+      var sell = a.sellCount || 0;
+      var total = buy + hold + sell;
+
+      if (total > 0) {
+        var buyPct = (buy / total * 100).toFixed(1);
+        var holdPct = (hold / total * 100).toFixed(1);
+        var sellPct = (sell / total * 100).toFixed(1);
+
+        html += '<div class="analyst-grid-wide">'
+          + '<div class="analyst-dist">'
+          + '<div class="analyst-dist-bar">'
+          + '<div class="analyst-dist-buy" style="width:' + buyPct + '%"></div>'
+          + '<div class="analyst-dist-hold" style="width:' + holdPct + '%"></div>'
+          + '<div class="analyst-dist-sell" style="width:' + sellPct + '%"></div>'
+          + '</div>'
+          + '<div class="analyst-dist-labels">'
+          + '<span><span class="analyst-dist-dot" style="background:#16a34a"></span> Buy ' + buy + '</span>'
+          + '<span><span class="analyst-dist-dot" style="background:#ca8a04"></span> Hold ' + hold + '</span>'
+          + '<span><span class="analyst-dist-dot" style="background:#dc2626"></span> Sell ' + sell + '</span>'
+          + '</div>'
+          + '</div>'
+          + '</div>';
+      }
+    }
+
+    html += '</div></div>';
+    return html;
+  }
+
   // ---- Build chart panel HTML --------------------------------
   function panelHTML(symbol, data, view) {
     var hasQ = data.availability && data.availability.quarterly;
     var hasY = data.availability && data.availability.yearly;
+    var hasAnalyst = data.analystSummary && data.analystSummary.available;
 
-    if (!hasQ && !hasY) return emptyHTML();
+    if (!hasQ && !hasY && !hasAnalyst) return emptyHTML();
 
-    var periods = getPeriods(data, view);
+    var html = '';
 
-    var html = '<div class="detail-header">'
-      + '<div class="detail-title">'
-      + '<span class="detail-title-text">Financial performance</span>'
-      + '<span class="detail-source">Source: ' + (data.source || 'Yahoo Finance') + '</span>'
-      + '</div>';
+    // Financial performance chart (if available)
+    if (hasQ || hasY) {
+      var periods = getPeriods(data, view);
 
-    // Toggle only if both views available
-    if (hasQ && hasY) {
-      var qActive = view !== 'yearly' ? ' toggle-active' : '';
-      var yActive = view === 'yearly' ? ' toggle-active' : '';
-      html += '<div class="detail-toggle">'
-        + '<button class="toggle-btn' + qActive + '" data-view="quarterly" data-symbol="' + symbol + '">Quarterly</button>'
-        + '<button class="toggle-btn' + yActive + '" data-view="yearly" data-symbol="' + symbol + '">Yearly</button>'
+      html += '<div class="detail-header">'
+        + '<div class="detail-title">'
+        + '<span class="detail-title-text">Financial performance</span>'
+        + '<span class="detail-source">Source: ' + (data.source || 'Yahoo Finance') + '</span>'
+        + '</div>';
+
+      // Toggle only if both views available
+      if (hasQ && hasY) {
+        var qActive = view !== 'yearly' ? ' toggle-active' : '';
+        var yActive = view === 'yearly' ? ' toggle-active' : '';
+        html += '<div class="detail-toggle">'
+          + '<button class="toggle-btn' + qActive + '" data-view="quarterly" data-symbol="' + symbol + '">Quarterly</button>'
+          + '<button class="toggle-btn' + yActive + '" data-view="yearly" data-symbol="' + symbol + '">Yearly</button>'
+          + '</div>';
+      }
+
+      html += '</div>';
+
+      // Compact latest-period summary
+      html += latestSummaryHTML(periods);
+
+      html += '<div class="detail-chart-wrap">'
+        + '<canvas id="chart-' + symbol + '"></canvas>'
         + '</div>';
     }
 
-    html += '</div>';
-
-    // Compact latest-period summary
-    html += latestSummaryHTML(periods);
-
-    html += '<div class="detail-chart-wrap">'
-      + '<canvas id="chart-' + symbol + '"></canvas>'
-      + '</div>';
+    // Analyst sentiment card
+    html += analystCardHTML(data.analystSummary);
 
     return html;
   }
@@ -350,9 +452,10 @@
 
         var hasQ = data.availability && data.availability.quarterly;
         var hasY = data.availability && data.availability.yearly;
+        var hasAnalyst = data.analystSummary && data.analystSummary.available;
 
-        // No financial data available (ETFs, indices, etc.)
-        if (!hasQ && !hasY) {
+        // No data at all (ETFs, indices, etc.)
+        if (!hasQ && !hasY && !hasAnalyst) {
           panel.innerHTML = emptyHTML();
           return;
         }

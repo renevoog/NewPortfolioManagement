@@ -1,6 +1,7 @@
-// Yahoo Finance — financial history service (income statements)
-// Fetches quarterly and annual revenue + net income via quoteSummary.
-// Uses modules: incomeStatementHistory, incomeStatementHistoryQuarterly
+// Yahoo Finance — expanded detail service
+// Fetches financial history + analyst consensus in a SINGLE quoteSummary call.
+// Modules: incomeStatementHistory, incomeStatementHistoryQuarterly,
+//          financialData, recommendationTrend
 
 const { quoteSummary } = require('./yahooFinanceClient');
 const { getYahooSymbol } = require('../symbolMap');
@@ -24,7 +25,7 @@ const epochToDate = (v) => {
 const quarterLabel = (dateStr) => {
   if (!dateStr) return '?';
   const d = new Date(dateStr);
-  const month = d.getMonth() + 1; // 1–12
+  const month = d.getMonth() + 1;
   let q;
   if (month <= 3) q = 1;
   else if (month <= 6) q = 2;
@@ -39,7 +40,7 @@ const yearLabel = (dateStr) => {
   return String(new Date(dateStr).getFullYear());
 };
 
-// Normalize one income statement entry into our standard shape
+// Normalize one income statement entry
 const normalizeEntry = (entry, labelFn) => {
   const date = epochToDate(entry.endDate);
   return {
@@ -58,18 +59,7 @@ const sortPeriods = (periods) => {
   });
 };
 
-/**
- * Calculate period-over-period % change for revenue and netIncome.
- * Mutates the array in-place, adding revenueChange and netIncomeChange fields.
- *
- * Rules:
- *   - First period: null (no previous to compare)
- *   - Previous value is null: null
- *   - Previous value is 0: null (avoid division by zero)
- *   - Net income sign crossover (prev negative, current positive or vice versa):
- *     still calculate, but if previous is very close to zero (abs < 1000),
- *     return null to avoid misleading huge percentages
- */
+// Add period-over-period % changes
 const addPeriodChanges = (periods) => {
   for (let i = 0; i < periods.length; i++) {
     if (i === 0) {
@@ -77,7 +67,6 @@ const addPeriodChanges = (periods) => {
       periods[i].netIncomeChange = null;
       continue;
     }
-
     periods[i].revenueChange = safePercentChange(
       periods[i].revenue, periods[i - 1].revenue
     );
@@ -88,52 +77,108 @@ const addPeriodChanges = (periods) => {
   return periods;
 };
 
-/**
- * Safe percentage change: ((current - previous) / |previous|) * 100
- * Uses absolute value of previous to keep sign direction meaningful
- * even when previous is negative.
- *
- * Returns null for:
- *   - missing values
- *   - previous is zero or near-zero (abs < 1000)
- */
 const safePercentChange = (current, previous) => {
   if (current === null || current === undefined) return null;
   if (previous === null || previous === undefined) return null;
-  if (Math.abs(previous) < 1000) return null; // near-zero guard
-
+  if (Math.abs(previous) < 1000) return null;
   return ((current - previous) / Math.abs(previous)) * 100;
 };
 
+// ---- Rating key normalization ----
+const RATING_MAP = {
+  'strongBuy': 'Strong Buy',
+  'strong_buy': 'Strong Buy',
+  'buy': 'Buy',
+  'overweight': 'Overweight',
+  'outperform': 'Outperform',
+  'hold': 'Hold',
+  'neutral': 'Neutral',
+  'underperform': 'Underperform',
+  'underweight': 'Underweight',
+  'sell': 'Sell',
+  'strongSell': 'Strong Sell',
+  'strong_sell': 'Strong Sell'
+};
+
+const formatRating = (key) => {
+  if (!key || key === 'none') return null;
+  return RATING_MAP[key] || key;
+};
+
+// ---- Extract analyst summary from financialData + recommendationTrend ----
+const extractAnalystSummary = (fd, rt) => {
+  if (!fd) fd = {};
+  if (!rt) rt = {};
+
+  const targetMean = rawVal(fd.targetMeanPrice);
+  const targetHigh = rawVal(fd.targetHighPrice);
+  const targetLow = rawVal(fd.targetLowPrice);
+  const currentPrice = rawVal(fd.currentPrice);
+  const analystCount = rawVal(fd.numberOfAnalystOpinions);
+  const rating = formatRating(fd.recommendationKey);
+
+  // Implied upside: ((target - current) / current) * 100
+  let impliedUpsidePct = null;
+  if (targetMean !== null && currentPrice !== null && currentPrice > 0) {
+    impliedUpsidePct = ((targetMean - currentPrice) / currentPrice) * 100;
+  }
+
+  // Buy / Hold / Sell counts from recommendationTrend (current month = period "0m")
+  let buyCount = null;
+  let holdCount = null;
+  let sellCount = null;
+  const trend = Array.isArray(rt.trend) ? rt.trend : [];
+  const current = trend.find((t) => t.period === '0m');
+  if (current) {
+    buyCount = (current.strongBuy || 0) + (current.buy || 0);
+    holdCount = current.hold || 0;
+    sellCount = (current.sell || 0) + (current.strongSell || 0);
+  }
+
+  // Determine if there is any meaningful data
+  const available = rating !== null || targetMean !== null || analystCount !== null;
+
+  return {
+    source: 'yahoo',
+    available: available,
+    consensusRating: rating,
+    averageTargetPrice: targetMean,
+    targetHigh: targetHigh,
+    targetLow: targetLow,
+    currentPrice: currentPrice,
+    impliedUpsidePct: impliedUpsidePct,
+    analystCount: analystCount,
+    buyCount: buyCount,
+    holdCount: holdCount,
+    sellCount: sellCount
+  };
+};
+
 /**
- * Fetch financial history for a single TradingView symbol.
- * Returns a normalized JSON payload with quarterly + yearly data.
- *
- * @param {string} tvSymbol — canonical TradingView symbol (e.g. 'AAPL', 'BRK.B', 'RMS')
- * @returns {object} normalized financial history
+ * Fetch full expanded-row detail for a single TradingView symbol.
+ * Returns financial history + analyst summary in one payload (one API call).
  */
 const getFinancialHistory = async (tvSymbol) => {
-  // Resolve to Yahoo symbol
   const yahooSymbol = getYahooSymbol(tvSymbol) || tvSymbol;
 
   const summary = await quoteSummary(yahooSymbol, {
     modules: [
       'incomeStatementHistory',
-      'incomeStatementHistoryQuarterly'
+      'incomeStatementHistoryQuarterly',
+      'financialData',
+      'recommendationTrend'
     ]
   });
 
-  // Extract annual statements
+  // ---- Financial history ----
   const annualRaw = summary.incomeStatementHistory
     && summary.incomeStatementHistory.incomeStatementHistory;
   const annualStatements = Array.isArray(annualRaw) ? annualRaw : [];
 
-  // Extract quarterly statements
   const quarterlyRaw = summary.incomeStatementHistoryQuarterly
     && summary.incomeStatementHistoryQuarterly.incomeStatementHistory;
   const quarterlyStatements = Array.isArray(quarterlyRaw) ? quarterlyRaw : [];
 
-  // Normalize, sort chronologically, then compute period-over-period changes
   const quarterlyPeriods = addPeriodChanges(sortPeriods(
     quarterlyStatements.map((e) => normalizeEntry(e, quarterLabel))
   ));
@@ -141,9 +186,14 @@ const getFinancialHistory = async (tvSymbol) => {
     annualStatements.map((e) => normalizeEntry(e, yearLabel))
   ));
 
-  // Determine availability — must have at least 1 period with revenue data
   const hasQuarterly = quarterlyPeriods.some((p) => p.revenue !== null);
   const hasYearly = yearlyPeriods.some((p) => p.revenue !== null);
+
+  // ---- Analyst summary ----
+  const analystSummary = extractAnalystSummary(
+    summary.financialData,
+    summary.recommendationTrend
+  );
 
   return {
     symbol: tvSymbol,
@@ -157,7 +207,8 @@ const getFinancialHistory = async (tvSymbol) => {
     },
     yearly: {
       periods: hasYearly ? yearlyPeriods : []
-    }
+    },
+    analystSummary: analystSummary
   };
 };
 

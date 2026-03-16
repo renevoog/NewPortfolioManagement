@@ -635,6 +635,134 @@ main.container-lg {
 .chg-neg { color: #dc2626; font-weight: 600; }
 .chg-neutral { color: var(--text-muted); font-weight: 500; }
 
+/* --- Analyst sentiment card -------------------------------- */
+.analyst-card {
+  margin-top: 20px;
+  padding: 16px 20px;
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.analyst-card-header {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.analyst-card-title {
+  font-weight: 600;
+  font-size: 0.92rem;
+  color: var(--text);
+}
+
+.analyst-card-count {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  font-weight: 400;
+}
+
+.analyst-grid {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 6px 24px;
+  align-items: center;
+}
+
+.analyst-grid-wide {
+  grid-column: 1 / -1;
+  margin-top: 4px;
+}
+
+.analyst-label {
+  font-size: 0.76rem;
+  color: var(--text-muted);
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.analyst-value {
+  font-size: 0.84rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.analyst-rating {
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.analyst-rating-buy { color: #16a34a; }
+.analyst-rating-hold { color: #ca8a04; }
+.analyst-rating-sell { color: #dc2626; }
+.analyst-rating-neutral { color: var(--text-muted); }
+
+.analyst-upside-pos { color: #16a34a; font-weight: 600; }
+.analyst-upside-neg { color: #dc2626; font-weight: 600; }
+
+/* Buy/Hold/Sell distribution bar */
+.analyst-dist {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+}
+
+.analyst-dist-bar {
+  flex: 1;
+  display: flex;
+  height: 8px;
+  border-radius: 4px;
+  overflow: hidden;
+  background: #e2e8f0;
+}
+
+.analyst-dist-buy {
+  background: #16a34a;
+  height: 100%;
+  transition: width .3s;
+}
+
+.analyst-dist-hold {
+  background: #ca8a04;
+  height: 100%;
+  transition: width .3s;
+}
+
+.analyst-dist-sell {
+  background: #dc2626;
+  height: 100%;
+  transition: width .3s;
+}
+
+.analyst-dist-labels {
+  display: flex;
+  gap: 12px;
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.analyst-dist-labels span {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.analyst-dist-dot {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+}
+
+.analyst-target-range {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  font-weight: 400;
+}
+
 /* --- Chart wrapper ----------------------------------------- */
 .detail-chart-wrap {
   position: relative;
