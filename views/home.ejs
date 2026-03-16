@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Stock Dashboard</title>
+  </head>
+  <body>
+    <h1>Stock Dashboard</h1>
+
+    <!-- Add Symbol Form -->
+    <form action="/add-symbol" method="POST" style="margin-bottom: 10px;">
+      <input type="text" name="symbol" placeholder="Enter TradingView symbol (e.g. AAPL, BRK.B, NYSE:TDY)" size="50" />
+      <button type="submit">Add</button>
+    </form>
+    <% if (error) { %>
+      <p style="color: red;"><%= error %></p>
+    <% } %>
+
+    <!-- Stock Table -->
+    <table border="1" cellpadding="4" cellspacing="0">
+      <thead>
+        <tr>
+          <th>Symbol</th>
+          <th>CompanyName</th>
+          <th>MarketCap</th>
+          <th>LastPrice</th>
+          <th>DailyChange</th>
+          <th>DailyChange%</th>
+          <th>Beta</th>
+          <th>TargetPrice</th>
+          <th>Rating</th>
+          <th>UpdateTime</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% (rows || []).forEach(function(row) { %>
+          <tr>
+            <td><%= row.symbol %></td>
+            <td><%= row.companyName %></td>
+            <td><%= row.marketCap %></td>
+            <td><%= row.lastPrice %></td>
+            <td><%= row.dailyChange %></td>
+            <td><%= row.dailyChangePct %></td>
+            <td><%= row.beta %></td>
+            <td><%= row.targetPrice %></td>
+            <td><%= row.rating %></td>
+            <td><%= row.updateTime %></td>
+          </tr>
+        <% }); %>
+      </tbody>
+    </table>
+
+    <p><%= (rows || []).length %> assets tracked</p>
+    <a href="/logout">Logout</a>
+  </body>
+</html>
