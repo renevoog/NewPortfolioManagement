@@ -3,7 +3,7 @@
 // Modules: incomeStatementHistory, incomeStatementHistoryQuarterly,
 //          financialData, recommendationTrend
 
-const { quoteSummary } = require('./yahooFinanceClient');
+const { quoteSummary, insights } = require('./yahooFinanceClient');
 const { getYahooSymbol } = require('../symbolMap');
 
 // Extract raw value from Yahoo's nested {raw, fmt} format
@@ -154,21 +154,36 @@ const extractAnalystSummary = (fd, rt) => {
   };
 };
 
+// Extract significant developments from insights response
+const extractSigDevs = (insightsData) => {
+  if (!insightsData || !insightsData.sigDevs) return [];
+
+  const devs = Array.isArray(insightsData.sigDevs) ? insightsData.sigDevs : [];
+  return devs.slice(0, 5).map((d) => ({
+    headline: d.headline || '',
+    date: d.date || null
+  })).filter((d) => d.headline);
+};
+
 /**
  * Fetch full expanded-row detail for a single TradingView symbol.
- * Returns financial history + analyst summary in one payload (one API call).
+ * Returns financial history + analyst summary + significant developments.
  */
 const getFinancialHistory = async (tvSymbol) => {
   const yahooSymbol = getYahooSymbol(tvSymbol) || tvSymbol;
 
-  const summary = await quoteSummary(yahooSymbol, {
-    modules: [
-      'incomeStatementHistory',
-      'incomeStatementHistoryQuarterly',
-      'financialData',
-      'recommendationTrend'
-    ]
-  });
+  // Fetch quoteSummary and insights in parallel
+  const [summary, insightsData] = await Promise.all([
+    quoteSummary(yahooSymbol, {
+      modules: [
+        'incomeStatementHistory',
+        'incomeStatementHistoryQuarterly',
+        'financialData',
+        'recommendationTrend'
+      ]
+    }),
+    insights(yahooSymbol).catch(() => null) // Non-critical, don't fail on insights error
+  ]);
 
   // ---- Financial history ----
   const annualRaw = summary.incomeStatementHistory
@@ -195,6 +210,9 @@ const getFinancialHistory = async (tvSymbol) => {
     summary.recommendationTrend
   );
 
+  // ---- Significant developments ----
+  const sigDevs = extractSigDevs(insightsData);
+
   return {
     symbol: tvSymbol,
     source: 'yahoo',
@@ -208,7 +226,8 @@ const getFinancialHistory = async (tvSymbol) => {
     yearly: {
       periods: hasYearly ? yearlyPeriods : []
     },
-    analystSummary: analystSummary
+    analystSummary: analystSummary,
+    sigDevs: sigDevs
   };
 };
 

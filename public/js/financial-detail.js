@@ -64,10 +64,16 @@
   }
 
   // ---- Empty state HTML --------------------------------------
-  function emptyHTML() {
+  function emptyHTML(assetType) {
+    var msg = 'No financial history available for this asset.';
+    if (assetType === 'etf') {
+      msg = 'ETF — financial statements are not applicable.';
+    } else if (assetType === 'index') {
+      msg = 'Index — financial statements are not applicable.';
+    }
     return '<div class="detail-empty">'
       + '<i class="bi bi-bar-chart"></i>'
-      + '<p>No financial history available for this asset.</p>'
+      + '<p>' + msg + '</p>'
       + '</div>';
   }
 
@@ -94,7 +100,6 @@
     var revChg = fmtChange(latest.revenueChange);
     var niChg = fmtChange(latest.netIncomeChange);
 
-    // Only show if at least one change value exists
     if (!revChg && !niChg) return '';
 
     var html = '<div class="detail-summary">';
@@ -144,6 +149,9 @@
     if (a.analystCount !== null) {
       html += '<span class="analyst-card-count">' + a.analystCount + ' analyst' + (a.analystCount !== 1 ? 's' : '') + '</span>';
     }
+    if (a.source) {
+      html += '<span class="analyst-card-source">via ' + esc(a.source) + '</span>';
+    }
     html += '</div>';
 
     html += '<div class="analyst-grid">';
@@ -169,7 +177,7 @@
     // Target range
     if (a.targetLow !== null && a.targetHigh !== null) {
       html += '<span class="analyst-label">Range</span>'
-        + '<span class="analyst-value analyst-target-range">' + fmtPrice(a.targetLow) + ' — ' + fmtPrice(a.targetHigh) + '</span>';
+        + '<span class="analyst-value analyst-target-range">' + fmtPrice(a.targetLow) + ' \u2014 ' + fmtPrice(a.targetHigh) + '</span>';
     }
 
     // Current price
@@ -212,12 +220,31 @@
   }
 
   // ---- Build chart panel HTML --------------------------------
+  // ---- Build sigDevs card HTML ---------------------------------
+  function sigDevsHTML(sigDevs) {
+    if (!sigDevs || !sigDevs.length) return '';
+    var html = '<div class="sigdevs-card">';
+    html += '<div class="sigdevs-header"><span class="sigdevs-title">Significant developments</span></div>';
+    html += '<ul class="sigdevs-list">';
+    for (var i = 0; i < sigDevs.length; i++) {
+      var d = sigDevs[i];
+      var dateStr = d.date ? '<span class="sigdevs-date">' + esc(d.date) + '</span>' : '';
+      html += '<li>' + dateStr + '<span class="sigdevs-text">' + esc(d.headline) + '</span></li>';
+    }
+    html += '</ul></div>';
+    return html;
+  }
+
   function panelHTML(symbol, data, view) {
     var hasQ = data.availability && data.availability.quarterly;
     var hasY = data.availability && data.availability.yearly;
     var hasAnalyst = data.analystSummary && data.analystSummary.available;
+    var hasSigDevs = data.sigDevs && data.sigDevs.length > 0;
 
-    if (!hasQ && !hasY && !hasAnalyst) return emptyHTML();
+    if (!hasQ && !hasY && !hasAnalyst && !hasSigDevs) {
+      var assetType = data.assetType || null;
+      return emptyHTML(assetType);
+    }
 
     var html = '';
 
@@ -231,7 +258,6 @@
         + '<span class="detail-source">Source: ' + (data.source || 'Yahoo Finance') + '</span>'
         + '</div>';
 
-      // Toggle only if both views available
       if (hasQ && hasY) {
         var qActive = view !== 'yearly' ? ' toggle-active' : '';
         var yActive = view === 'yearly' ? ' toggle-active' : '';
@@ -243,7 +269,6 @@
 
       html += '</div>';
 
-      // Compact latest-period summary
       html += latestSummaryHTML(periods);
 
       html += '<div class="detail-chart-wrap">'
@@ -253,6 +278,9 @@
 
     // Analyst sentiment card
     html += analystCardHTML(data.analystSummary);
+
+    // Significant developments
+    html += sigDevsHTML(data.sigDevs);
 
     return html;
   }
@@ -274,7 +302,6 @@
     var revenueData = periods.map(function (p) { return p.revenue; });
     var netIncomeData = periods.map(function (p) { return p.netIncome; });
 
-    // Destroy existing chart for this symbol
     if (charts[symbol]) {
       charts[symbol].destroy();
       charts[symbol] = null;
@@ -344,24 +371,18 @@
                 return title;
               },
               label: function (item) {
-                var idx = item.dataIndex;
-                var period = periods[idx];
                 var val = item.raw;
-                var line = ' ' + item.dataset.label + ': ' + fullValue(val);
-                return line;
+                return ' ' + item.dataset.label + ': ' + fullValue(val);
               },
               afterLabel: function (item) {
                 var idx = item.dataIndex;
                 var period = periods[idx];
-
-                // Determine which change field to show
                 var change = null;
                 if (item.datasetIndex === 0) {
                   change = period.revenueChange;
                 } else if (item.datasetIndex === 1) {
                   change = period.netIncomeChange;
                 }
-
                 var formatted = fmtChange(change);
                 if (!formatted) return '';
                 return '    vs prev: ' + formatted;
@@ -401,7 +422,6 @@
 
     activeView[symbol] = view;
 
-    // Re-render entire panel (including updated summary) with cached data
     if (cache[symbol]) {
       var panel = document.getElementById('panel-' + symbol);
       if (panel) {
@@ -412,28 +432,11 @@
     }
   }
 
-  // ---- Expand / collapse a row -------------------------------
-  function toggleRow(symbol) {
-    var detailRow = document.getElementById('detail-' + symbol);
+  // ---- Render a panel for a symbol (used by both expand and reopen) ---
+  function renderPanel(symbol) {
     var panel = document.getElementById('panel-' + symbol);
-    var expandBtn = document.querySelector('.btn-expand[data-symbol="' + symbol + '"]');
+    if (!panel) return;
 
-    if (!detailRow || !panel) return;
-
-    var isOpen = detailRow.style.display !== 'none';
-
-    if (isOpen) {
-      // Collapse
-      detailRow.style.display = 'none';
-      if (expandBtn) expandBtn.classList.remove('expanded');
-      return;
-    }
-
-    // Expand
-    detailRow.style.display = '';
-    if (expandBtn) expandBtn.classList.add('expanded');
-
-    // If data is cached, render immediately
     if (cache[symbol]) {
       var view = activeView[symbol] || 'quarterly';
       panel.innerHTML = panelHTML(symbol, cache[symbol], view);
@@ -454,20 +457,46 @@
         var hasY = data.availability && data.availability.yearly;
         var hasAnalyst = data.analystSummary && data.analystSummary.available;
 
-        // No data at all (ETFs, indices, etc.)
         if (!hasQ && !hasY && !hasAnalyst) {
-          panel.innerHTML = emptyHTML();
+          panel.innerHTML = emptyHTML(data.assetType || null);
           return;
         }
 
-        activeView[symbol] = 'quarterly';
-        panel.innerHTML = panelHTML(symbol, data, 'quarterly');
-        renderChart(symbol, data, 'quarterly');
+        if (!activeView[symbol]) activeView[symbol] = 'quarterly';
+        var view = activeView[symbol];
+        panel.innerHTML = panelHTML(symbol, data, view);
+        renderChart(symbol, data, view);
         attachToggleListeners(panel);
       })
       .catch(function () {
         panel.innerHTML = errorHTML('Failed to load financial data.');
       });
+  }
+
+  // ---- Expand / collapse a row -------------------------------
+  function toggleRow(symbol) {
+    var detailRow = document.getElementById('detail-' + symbol);
+    var panel = document.getElementById('panel-' + symbol);
+    var expandBtn = document.querySelector('.btn-expand[data-symbol="' + symbol + '"]');
+
+    if (!detailRow || !panel) return;
+
+    var isOpen = detailRow.style.display !== 'none';
+
+    if (isOpen) {
+      // Collapse
+      detailRow.style.display = 'none';
+      if (expandBtn) expandBtn.classList.remove('expanded');
+      if (window.__setExpanded) window.__setExpanded(symbol, false);
+      return;
+    }
+
+    // Expand
+    detailRow.style.display = '';
+    if (expandBtn) expandBtn.classList.add('expanded');
+    if (window.__setExpanded) window.__setExpanded(symbol, true);
+
+    renderPanel(symbol);
   }
 
   // ---- Attach toggle listeners inside a panel ----------------
@@ -489,5 +518,13 @@
       if (symbol) toggleRow(symbol);
     });
   }
+
+  // ---- Listen for detail-reopen events (from dashboard.js rerender) ----
+  document.addEventListener('detail-reopen', function (e) {
+    var symbol = e.detail && e.detail.symbol;
+    if (symbol) {
+      renderPanel(symbol);
+    }
+  });
 
 })();

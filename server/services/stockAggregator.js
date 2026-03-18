@@ -2,28 +2,30 @@ const { resolveInstruments, getRatesForInstrumentIds, getInstrumentDetails } = r
 const { batchQuotes, batchAnalystData } = require('./yahoo/yahooStockService');
 const { getYahooSymbol } = require('./symbolMap');
 const { formatMarketCap, formatPrice, formatDailyChange, formatPercent, formatBeta, formatTargetPrice, formatEstoniaTime } = require('./formatters');
-const { buildEarningsEvent } = require('./eventService');
+const { buildEvent } = require('./eventService');
 
 // Build a mapping of tvSymbol -> yahooSymbol for a list of TV symbols
-const buildYahooMap = (tvSymbols) => {
+// Prefers DB-stored mapping, then in-memory map, then falls back to symbol itself
+const buildYahooMap = (tvSymbols, dbSymbolMap) => {
   const map = {};
   tvSymbols.forEach((tv) => {
-    const yahoo = getYahooSymbol(tv);
-    if (yahoo) {
-      map[tv] = yahoo;
+    // Prefer DB-stored mapping (from addSymbol resolution)
+    if (dbSymbolMap && dbSymbolMap[tv]) {
+      map[tv] = dbSymbolMap[tv];
     } else {
-      map[tv] = tv;
+      const yahoo = getYahooSymbol(tv);
+      map[tv] = yahoo || tv;
     }
   });
   return map;
 };
 
 // Get stock rows for all symbols
-// Primary: Yahoo Finance. Fallback: eToro (only for symbols where Yahoo returned no data)
-const getStockRows = async (tvSymbols) => {
+// Primary: Yahoo Finance. Fallback: eToro (for price when Yahoo fails, and for analyst data when Yahoo lacks it)
+const getStockRows = async (tvSymbols, dbSymbolMap) => {
   if (!tvSymbols || !tvSymbols.length) return [];
 
-  const yahooMap = buildYahooMap(tvSymbols);
+  const yahooMap = buildYahooMap(tvSymbols, dbSymbolMap);
   const yahooSymbols = [...new Set(Object.values(yahooMap))];
 
   // Phase 1: Fetch everything from Yahoo
@@ -47,10 +49,20 @@ const getStockRows = async (tvSymbols) => {
     return !yq || typeof yq.regularMarketPrice !== 'number';
   });
 
+  // Phase 2b: Also resolve eToro for symbols missing analyst data
+  const missingAnalystSymbols = tvSymbols.filter((tv) => {
+    const ya = yahooAnalyst[yahooMap[tv]];
+    const hasAnalyst = ya && (ya.targetPrice !== null || ya.rating !== null);
+    return !hasAnalyst;
+  });
+
+  // Union of symbols needing eToro
+  const needEtoro = [...new Set([...missingSymbols, ...missingAnalystSymbols])];
+
   let etoroData = {};
-  if (missingSymbols.length > 0) {
-    console.log('eToro fallback for', missingSymbols.length, 'symbols:', missingSymbols.join(', '));
-    etoroData = await fetchEtoroFallback(missingSymbols);
+  if (needEtoro.length > 0) {
+    console.log('eToro lookup for', needEtoro.length, 'symbols');
+    etoroData = await fetchEtoroFallback(needEtoro);
   }
 
   const now = new Date();
@@ -62,7 +74,7 @@ const getStockRows = async (tvSymbols) => {
     const etoro = etoroData[tvSymbol] || null;
 
     const raw = extractRawValues(yQuote, yAnalyst, etoro);
-    const event = buildEarningsEvent(yQuote, now);
+    const event = buildEvent(yQuote, now);
 
     return {
       symbol: tvSymbol,
@@ -79,7 +91,7 @@ const getStockRows = async (tvSymbols) => {
   });
 };
 
-// Fetch eToro data only for the symbols that Yahoo couldn't resolve
+// Fetch eToro data only for the symbols that need it
 const fetchEtoroFallback = async (tvSymbols) => {
   const result = {};
 
@@ -113,7 +125,7 @@ const fetchEtoroFallback = async (tvSymbols) => {
   return result;
 };
 
-// Extract raw values — Yahoo primary, eToro fills gaps
+// Extract raw values — Yahoo primary, eToro fills gaps for price AND analyst data
 const extractRawValues = (yQuote, yAnalyst, etoro) => {
   const etoroDetails = (etoro && etoro.details) || {};
   const etoroRate = (etoro && etoro.rate) || null;
@@ -126,8 +138,10 @@ const extractRawValues = (yQuote, yAnalyst, etoro) => {
   // Currency
   const currency = (yQuote && yQuote.currency) || 'USD';
 
-  // Market cap (Yahoo only)
-  const marketCap = (yQuote && yQuote.marketCap) || null;
+  // Market cap — Yahoo primary, eToro fallback
+  const marketCap = (yQuote && yQuote.marketCap)
+    || etoroDetails.marketCap
+    || null;
 
   // Last price
   let lastPrice = null;
@@ -152,10 +166,23 @@ const extractRawValues = (yQuote, yAnalyst, etoro) => {
     }
   }
 
-  // Beta, target price, rating (Yahoo only — eToro public API doesn't provide these)
-  const beta = (yAnalyst && typeof yAnalyst.beta === 'number') ? yAnalyst.beta : null;
-  const targetPrice = (yAnalyst && typeof yAnalyst.targetPrice === 'number') ? yAnalyst.targetPrice : null;
-  const rating = (yAnalyst && yAnalyst.rating) ? formatRating(yAnalyst.rating) : null;
+  // Beta — Yahoo primary, eToro fallback
+  let beta = (yAnalyst && typeof yAnalyst.beta === 'number') ? yAnalyst.beta : null;
+  if (beta === null && typeof etoroDetails.beta === 'number') {
+    beta = etoroDetails.beta;
+  }
+
+  // Target price — Yahoo primary, eToro TipRanks fallback
+  let targetPrice = (yAnalyst && typeof yAnalyst.targetPrice === 'number') ? yAnalyst.targetPrice : null;
+  if (targetPrice === null && typeof etoroDetails.tipranksTargetPrice === 'number') {
+    targetPrice = etoroDetails.tipranksTargetPrice;
+  }
+
+  // Rating — Yahoo primary, eToro TipRanks fallback
+  let rating = (yAnalyst && yAnalyst.rating) ? formatRating(yAnalyst.rating) : null;
+  if (rating === null && etoroDetails.tipranksConsensus) {
+    rating = formatRating(etoroDetails.tipranksConsensus);
+  }
 
   return {
     companyName, currency, marketCap, lastPrice,

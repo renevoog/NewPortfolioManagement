@@ -260,6 +260,47 @@ main.container-lg {
 .change-pos { color: var(--green); font-weight: 500; }
 .change-neg { color: var(--red); font-weight: 500; }
 
+/* --- Rating column ----------------------------------------- */
+.col-rating {
+  white-space: nowrap;
+  text-align: center;
+}
+
+.rating-none {
+  color: var(--text-muted);
+  opacity: 0.5;
+}
+
+.rating-badge {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 4px;
+  font-size: 0.74rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  line-height: 1.3;
+}
+
+.rating-buy {
+  color: #15803d;
+  background: #dcfce7;
+}
+
+.rating-sell {
+  color: #b91c1c;
+  background: #fef2f2;
+}
+
+.rating-hold {
+  color: #a16207;
+  background: #fefce8;
+}
+
+.rating-neutral {
+  color: var(--text-muted);
+  background: #f1f5f9;
+}
+
 /* --- Events column ----------------------------------------- */
 .col-event {
   white-space: nowrap;
@@ -819,6 +860,151 @@ main.container-lg {
   text-align: center;
   padding: 40px 14px;
   color: var(--text-muted);
+}
+
+/* --- Share bar (admin only) -------------------------------- */
+.share-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+  flex-wrap: wrap;
+}
+
+.share-form {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.share-form input {
+  padding: 6px 12px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-family: inherit;
+  font-size: 0.82rem;
+  width: 240px;
+  background: var(--card-bg);
+  transition: border-color .15s;
+}
+.share-form input:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px rgba(59,130,246,.12);
+}
+
+.btn-share {
+  padding: 6px 14px;
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  font-family: inherit;
+  font-size: 0.82rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background .15s;
+  white-space: nowrap;
+}
+.btn-share:hover { background: #2563eb; }
+
+.share-msg {
+  font-size: 0.78rem;
+  font-weight: 500;
+}
+.share-success { color: #16a34a; }
+.share-error { color: var(--red); }
+
+/* --- Empty watchlist state --------------------------------- */
+.empty-watchlist {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 24px 0;
+  color: var(--text-muted);
+}
+.empty-watchlist p {
+  margin: 0;
+  font-size: 0.9rem;
+}
+.empty-watchlist-hint {
+  font-size: 0.78rem !important;
+  opacity: 0.7;
+}
+
+/* --- Alert / abnormal move badge --------------------------- */
+.event-alert {
+  color: #7c2d12;
+  background: #fed7aa;
+}
+.event-alert:hover {
+  background: #fdba74;
+}
+.event-alert i {
+  color: #ea580c;
+}
+
+/* --- SigDev event badge ------------------------------------ */
+.event-sigdev {
+  color: #312e81;
+  background: #e0e7ff;
+}
+.event-sigdev:hover {
+  background: #c7d2fe;
+}
+.event-sigdev i {
+  color: #4338ca;
+}
+
+/* --- Significant developments card ------------------------- */
+.sigdevs-card {
+  margin-top: 16px;
+  padding: 14px 18px;
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.sigdevs-header {
+  margin-bottom: 10px;
+}
+
+.sigdevs-title {
+  font-weight: 600;
+  font-size: 0.88rem;
+  color: var(--text);
+}
+
+.sigdevs-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.sigdevs-list li {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 5px 0;
+  border-bottom: 1px solid #f1f5f9;
+  font-size: 0.8rem;
+  line-height: 1.4;
+}
+.sigdevs-list li:last-child {
+  border-bottom: none;
+}
+
+.sigdevs-date {
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  white-space: nowrap;
+  min-width: 72px;
+  flex-shrink: 0;
+}
+
+.sigdevs-text {
+  color: var(--text);
 }
 
 /* --- Responsive -------------------------------------------- */

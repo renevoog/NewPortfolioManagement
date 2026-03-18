@@ -98,6 +98,31 @@ const quoteSummary = async (symbol, opts) => {
   return (results && results[0]) || {};
 };
 
+// Fetch insights for a symbol (sigDevs, recommendation, etc.)
+const insights = async (symbol) => {
+  await initCrumb();
+
+  const url = `https://query2.finance.yahoo.com/ws/insights/v3/finance/insights?symbol=${encodeURIComponent(symbol)}&lang=en-US&reportsCount=0&crumb=${encodeURIComponent(_crumb || '')}`;
+
+  const res = await fetch(url, {
+    headers: {
+      'User-Agent': UA,
+      'Cookie': _cookie || ''
+    }
+  });
+
+  if (!res.ok) {
+    if (res.status === 401 || res.status === 403) {
+      _crumb = null;
+      _cookie = null;
+    }
+    throw new Error(`Yahoo insights failed: ${res.status}`);
+  }
+
+  const data = await res.json();
+  return (data && data.finance && data.finance.result) || {};
+};
+
 // Search for a symbol
 const search = async (query) => {
   const url = `https://query2.finance.yahoo.com/v1/finance/search?q=${encodeURIComponent(query)}&quotesCount=5&newsCount=0`;
@@ -115,4 +140,5 @@ const search = async (query) => {
 
 exports.quote = quote;
 exports.quoteSummary = quoteSummary;
+exports.insights = insights;
 exports.search = search;

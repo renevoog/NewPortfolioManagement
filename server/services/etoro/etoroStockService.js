@@ -3,26 +3,45 @@ const { etoroGet } = require('./etoroHttpClient');
 // In-memory instrument resolution cache: symbol -> instrumentData
 const instrumentCache = {};
 
+// Stock/ETF instrument types on eToro (excludes crypto, CFDs, etc.)
+const STOCK_TYPES = new Set(['Stocks', 'ETF', 'StocksETFs']);
+
 const pickBestSymbolMatch = (items, symbol) => {
   if (!Array.isArray(items) || !items.length) return null;
 
   const target = String(symbol || '').toUpperCase();
 
-  // Try exact match on internalSymbolFull
-  const exact = items.find((item) => {
-    return String(item.internalSymbolFull || '').toUpperCase() === target;
+  // Filter to stock/ETF instruments only (avoid crypto matches like SPX crypto)
+  const stockItems = items.filter((item) => {
+    const type = item.instrumentTypeID || item.instrumentType || '';
+    // If type info is available, filter. If not, keep the item.
+    if (!type) return true;
+    return STOCK_TYPES.has(type) || typeof type === 'number';
   });
 
+  const pool = stockItems.length > 0 ? stockItems : items;
+
+  // Try exact match on internalSymbolFull
+  const exact = pool.find((item) => {
+    return String(item.internalSymbolFull || '').toUpperCase() === target;
+  });
   if (exact) return exact;
 
   // Try match on symbolFull
-  const symbolMatch = items.find((item) => {
+  const symbolMatch = pool.find((item) => {
     return String(item.symbolFull || '').toUpperCase() === target;
   });
-
   if (symbolMatch) return symbolMatch;
 
-  return items[0];
+  // Try match on instrumentDisplayName containing the target
+  const nameMatch = pool.find((item) => {
+    const name = String(item.internalSymbolFull || item.symbolFull || '').toUpperCase();
+    return name === target;
+  });
+  if (nameMatch) return nameMatch;
+
+  // Do NOT fall back to items[0] — ambiguous matches are dangerous
+  return null;
 };
 
 // Resolve a single symbol to an eToro instrument (with cache)
@@ -53,12 +72,11 @@ const resolveInstrument = async (symbol) => {
   }
 };
 
-// Batch resolve instruments (parallel in chunks to balance speed vs rate limits)
+// Batch resolve instruments (parallel in chunks)
 const resolveInstruments = async (symbols) => {
   const results = {};
   const uncached = [];
 
-  // Return cached results immediately
   symbols.forEach((symbol) => {
     const key = String(symbol).toUpperCase();
     if (instrumentCache[key]) {
@@ -68,7 +86,6 @@ const resolveInstruments = async (symbols) => {
     }
   });
 
-  // Resolve uncached in parallel chunks of 5 (eToro rate limits at ~60 req/min)
   const chunkSize = 5;
   for (let i = 0; i < uncached.length; i += chunkSize) {
     const chunk = uncached.slice(i, i + chunkSize);
@@ -105,7 +122,6 @@ const getRatesForInstrumentIds = async (instrumentIds) => {
 };
 
 // Get full instrument details from cached search response
-// eToro search returns: currentRate, dailyPriceChange, internalClosingPrice, etc.
 const getInstrumentDetails = (instrument) => {
   if (!instrument) return {};
 
@@ -115,11 +131,18 @@ const getInstrumentDetails = (instrument) => {
     symbol: instrument.internalSymbolFull || instrument.symbolFull || null,
     currentRate: typeof instrument.currentRate === 'number' ? instrument.currentRate : null,
     closingPrice: typeof instrument.internalClosingPrice === 'number' ? instrument.internalClosingPrice : null,
-    dailyPriceChangePct: typeof instrument.dailyPriceChange === 'number' ? instrument.dailyPriceChange : null
+    dailyPriceChangePct: typeof instrument.dailyPriceChange === 'number' ? instrument.dailyPriceChange : null,
+    // eToro stock snapshot fields the audit confirmed are available
+    marketCap: instrument.marketCapInUSD || null,
+    beta: instrument['beta-TTM'] || null,
+    tipranksConsensus: instrument.tipranksConsensus || null,
+    tipranksTargetPrice: typeof instrument.tipranksTargetPrice === 'number' ? instrument.tipranksTargetPrice : null,
+    tipranksTotalAnalysts: typeof instrument.tipranksTotalAnalysts === 'number' ? instrument.tipranksTotalAnalysts : null,
+    nextEarningDate: instrument.nextEarningDate || null
   };
 };
 
-// Validate if a symbol exists on eToro
+// Validate if a symbol exists on eToro (exact match only)
 const validateSymbol = async (symbol) => {
   const instrument = await resolveInstrument(symbol);
   return instrument !== null;

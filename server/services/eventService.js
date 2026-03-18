@@ -1,27 +1,18 @@
 // Event formatting service
 // Normalizes earnings/event data from Yahoo Finance quote response
 // into a clean internal event object for the dashboard Events column.
+// Only surfaces events within a useful window to reduce noise.
 
 const { formatEstoniaTime } = require('./formatters');
 
+// Thresholds
+const EARNINGS_SOON_DAYS = 7;       // Show earnings if within 7 days
+const EARNINGS_AFTERMATH_DAYS = 3;  // Show "just reported" for 3 days after
+const ABNORMAL_MOVE_PCT = 5.0;      // Flag daily moves >= 5%
+
 /**
  * Build a normalized event object from Yahoo quote earnings fields.
- *
- * Yahoo v7/finance/quote provides:
- *   earningsTimestamp        — most recent or confirmed next earnings (epoch seconds)
- *   earningsTimestampStart   — next upcoming earnings window start (epoch seconds)
- *   earningsTimestampEnd     — next upcoming earnings window end (epoch seconds)
- *   isEarningsDateEstimate   — boolean, true if date is estimated
- *
- * Strategy:
- *   1. If earningsTimestampStart is in the future → use it (next upcoming)
- *   2. Else if earningsTimestamp is in the future → use it
- *   3. Else if earningsTimestamp is in the past    → show as past event
- *   4. Else → no event available
- *
- * @param {object} yQuote — raw Yahoo v7 quote object
- * @param {Date}   now    — reference time
- * @returns {object|null} normalized event object or null
+ * Returns null for events outside the attention window.
  */
 const buildEarningsEvent = (yQuote, now) => {
   if (!yQuote) return null;
@@ -36,6 +27,7 @@ const buildEarningsEvent = (yQuote, now) => {
   // Pick the best timestamp: prefer upcoming start, fall back to main
   let epochSec = null;
   let isRange = false;
+  let isPast = false;
 
   if (tsStart && (tsStart * 1000) > nowMs) {
     epochSec = tsStart;
@@ -43,8 +35,9 @@ const buildEarningsEvent = (yQuote, now) => {
   } else if (tsMain && (tsMain * 1000) > nowMs) {
     epochSec = tsMain;
   } else if (tsMain) {
-    // All in the past — show most recent earnings
+    // Past earnings
     epochSec = tsMain;
+    isPast = true;
   }
 
   if (!epochSec) return null;
@@ -52,7 +45,10 @@ const buildEarningsEvent = (yQuote, now) => {
   const eventDate = new Date(epochSec * 1000);
   const diffMs = eventDate.getTime() - nowMs;
   const daysUntil = Math.ceil(diffMs / 86400000);
-  const isPast = daysUntil < 0;
+
+  // Filter: only show if within attention window
+  if (!isPast && daysUntil > EARNINGS_SOON_DAYS) return null;
+  if (isPast && Math.abs(daysUntil) > EARNINGS_AFTERMATH_DAYS) return null;
 
   return {
     type: 'earnings',
@@ -68,14 +64,51 @@ const buildEarningsEvent = (yQuote, now) => {
 };
 
 /**
+ * Detect abnormal daily move from quote data.
+ * Returns an event object if the daily change % exceeds threshold.
+ */
+const buildAbnormalMoveEvent = (yQuote) => {
+  if (!yQuote) return null;
+
+  const changePct = yQuote.regularMarketChangePercent;
+  if (typeof changePct !== 'number') return null;
+  if (Math.abs(changePct) < ABNORMAL_MOVE_PCT) return null;
+
+  const sign = changePct > 0 ? '+' : '';
+  const label = sign + changePct.toFixed(1) + '% today';
+
+  return {
+    type: 'abnormal_move',
+    label: label,
+    tooltipDate: 'Abnormal daily move: ' + label,
+    changePct: changePct,
+    isPast: false,
+    isEstimate: false
+  };
+};
+
+/**
+ * Build the best single event for the Events column.
+ * Priority: earnings within window > abnormal move > nothing.
+ */
+const buildEvent = (yQuote, now) => {
+  // Earnings takes priority
+  const earningsEvent = buildEarningsEvent(yQuote, now);
+  if (earningsEvent) return earningsEvent;
+
+  // Abnormal move
+  const moveEvent = buildAbnormalMoveEvent(yQuote);
+  if (moveEvent) return moveEvent;
+
+  return null;
+};
+
+/**
  * Build the main cell label text.
- *   Within 14 days future: relative ("In 10 days", "Tomorrow", "Today")
- *   Past: "Reported" + compact date
- *   Beyond 14 days: compact date
  */
 const buildLabel = (daysUntil, date, isPast) => {
   if (isPast) {
-    return formatCompactDate(date);
+    return 'Reported ' + formatCompactDate(date);
   }
 
   if (daysUntil === 0) return 'Today';
@@ -86,12 +119,14 @@ const buildLabel = (daysUntil, date, isPast) => {
 };
 
 /**
- * Format a date as compact: "26 Mar 2026"
+ * Format a date as compact: "26 Mar"
  */
 const formatCompactDate = (date) => {
   const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
                   'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-  return date.getDate() + ' ' + months[date.getMonth()] + ' ' + date.getFullYear();
+  return date.getDate() + ' ' + months[date.getMonth()];
 };
 
 exports.buildEarningsEvent = buildEarningsEvent;
+exports.buildAbnormalMoveEvent = buildAbnormalMoveEvent;
+exports.buildEvent = buildEvent;

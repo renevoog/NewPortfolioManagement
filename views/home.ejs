@@ -24,6 +24,15 @@
           <button type="submit" class="btn-add"><i class="bi bi-plus-lg"></i> Add</button>
         </form>
       </div>
+      <% if (isAdmin) { %>
+      <div class="share-bar">
+        <form class="share-form" id="share-form">
+          <input type="email" name="email" id="share-email-input" placeholder="Share list to user email..." required />
+          <button type="submit" class="btn-share"><i class="bi bi-share"></i> Share</button>
+        </form>
+        <span id="share-msg" class="share-msg" style="display:none;"></span>
+      </div>
+      <% } %>
       <div id="error-msg" class="error-msg" style="display:none;"></div>
 
       <!-- Table -->

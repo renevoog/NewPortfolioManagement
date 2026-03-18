@@ -18,6 +18,9 @@
 
   var currentSort = { col: null, dir: null };
 
+  // Track which rows are expanded (survives rerender)
+  var expandedSymbols = {};
+
   // ---- Helpers: parse formatted numbers ---------------------
 
   function parseMarketCap(str) {
@@ -68,6 +71,23 @@
     return 'https://www.tradingview.com/symbols/' + encodeURIComponent(symbol) + '/';
   }
 
+  // ---- Build rating badge HTML --------------------------------
+  function ratingCell(rating) {
+    if (!rating || rating === '-') return '<td class="col-rating"><span class="rating-none">-</span></td>';
+
+    var r = rating.toLowerCase();
+    var cls = 'rating-neutral';
+    if (r.indexOf('buy') !== -1 || r.indexOf('outperform') !== -1 || r.indexOf('overweight') !== -1) {
+      cls = 'rating-buy';
+    } else if (r.indexOf('sell') !== -1 || r.indexOf('underperform') !== -1 || r.indexOf('underweight') !== -1) {
+      cls = 'rating-sell';
+    } else if (r.indexOf('hold') !== -1 || r.indexOf('neutral') !== -1) {
+      cls = 'rating-hold';
+    }
+
+    return '<td class="col-rating"><span class="rating-badge ' + cls + '">' + esc(rating) + '</span></td>';
+  }
+
   // ---- Build event cell HTML --------------------------------
   function eventCell(ev) {
     if (!ev) return '<td class="col-event"><span class="event-none">-</span></td>';
@@ -88,14 +108,22 @@
         badgeClass = 'event-upcoming';
         typeLabel = 'Earnings';
       }
+    } else if (ev.type === 'abnormal_move') {
+      icon = 'bi-graph-up-arrow';
+      badgeClass = 'event-alert';
+      typeLabel = 'Move';
+    } else if (ev.type === 'sigdev') {
+      icon = 'bi-lightning';
+      badgeClass = 'event-sigdev';
+      typeLabel = 'Signal';
     } else {
       icon = 'bi-calendar';
       badgeClass = 'event-upcoming';
       typeLabel = 'Event';
     }
 
-    // Build tooltip: type + exact date + estimate flag
-    tooltip = typeLabel + ': ' + esc(ev.tooltipDate || ev.displayDate || '');
+    // Build tooltip
+    tooltip = typeLabel + ': ' + esc(ev.tooltipDate || ev.displayDate || ev.label || '');
     if (ev.isEstimate) tooltip += ' (est.)';
 
     return '<td class="col-event">'
@@ -110,6 +138,20 @@
   function render(data) {
     if (!tbody) return;
 
+    // True empty state: user has no assets at all (not just search miss)
+    if (!data.length && rows.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="12" class="no-data">'
+        + '<div class="empty-watchlist">'
+        + '<i class="bi bi-plus-circle" style="font-size:1.6rem;opacity:0.4;"></i>'
+        + '<p>Your watchlist is empty</p>'
+        + '<p class="empty-watchlist-hint">Add your first symbol using the input above.</p>'
+        + '</div>'
+        + '</td></tr>';
+      if (countEl) countEl.textContent = '0 assets';
+      return;
+    }
+
+    // Search returned no results
     if (!data.length) {
       tbody.innerHTML = '<tr><td colspan="12" class="no-data">No matching assets</td></tr>';
       if (countEl) countEl.textContent = '0 assets';
@@ -120,8 +162,12 @@
     for (var i = 0; i < data.length; i++) {
       var r = data[i];
       var safeSymbol = esc(r.symbol);
+      var isExpanded = expandedSymbols[r.symbol] || false;
+      var expandedClass = isExpanded ? ' expanded' : '';
+      var detailDisplay = isExpanded ? '' : 'display:none;';
+
       html += '<tr class="asset-row" data-symbol="' + safeSymbol + '">'
-        + '<td class="col-expand"><button class="btn-expand" data-symbol="' + safeSymbol + '" title="Show financial details"><i class="bi bi-chevron-right"></i></button></td>'
+        + '<td class="col-expand"><button class="btn-expand' + expandedClass + '" data-symbol="' + safeSymbol + '" title="Show financial details"><i class="bi bi-chevron-right"></i></button></td>'
         + '<td class="col-sym"><a class="sym-link" href="' + tvUrl(r.symbol) + '" target="_blank" rel="noopener">' + safeSymbol + '</a></td>'
         + '<td>' + esc(r.companyName) + '</td>'
         + '<td class="col-num">' + esc(r.marketCap) + '</td>'
@@ -130,22 +176,33 @@
         + '<td class="col-num ' + changeClass(r.dailyChangePct) + '">' + esc(r.dailyChangePct) + '</td>'
         + '<td class="col-num">' + esc(r.beta) + '</td>'
         + '<td class="col-num">' + esc(r.targetPrice) + '</td>'
-        + '<td>' + esc(r.rating) + '</td>'
+        + ratingCell(r.rating)
         + eventCell(r.event)
         + '<td><button class="btn-delete" title="Remove ' + safeSymbol + '" onclick="window.__deleteSymbol(\'' + esc(r.symbol) + '\')"><i class="bi bi-trash3"></i></button></td>'
         + '</tr>'
-        + '<tr class="detail-row" id="detail-' + safeSymbol + '" style="display:none;">'
+        + '<tr class="detail-row" id="detail-' + safeSymbol + '" style="' + detailDisplay + '">'
         + '<td colspan="12"><div class="detail-panel" id="panel-' + safeSymbol + '"></div></td>'
         + '</tr>';
     }
     tbody.innerHTML = html;
     if (countEl) countEl.textContent = data.length + ' asset' + (data.length !== 1 ? 's' : '');
+
+    // Re-trigger detail rendering for expanded rows (financial-detail.js handles this via event)
+    Object.keys(expandedSymbols).forEach(function (sym) {
+      if (expandedSymbols[sym]) {
+        var evt = new CustomEvent('detail-reopen', { detail: { symbol: sym } });
+        document.dispatchEvent(evt);
+      }
+    });
   }
 
   function esc(s) {
     if (s === null || s === undefined) return '-';
     return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
   }
+
+  // ---- Expose expanded state to financial-detail.js ---------
+  window.__expandedSymbols = expandedSymbols;
 
   // ---- Filter -----------------------------------------------
   function getFilteredRows() {
@@ -233,11 +290,22 @@
     });
   }
 
-  // ---- Delete -----------------------------------------------
+  // ---- Delete (with server error rollback) ------------------
   window.__deleteSymbol = function (symbol) {
     if (!confirm('Remove ' + symbol + ' from your list?')) return;
 
+    // Optimistic removal
+    var removedRow = null;
+    var removedIndex = -1;
+    for (var i = 0; i < rows.length; i++) {
+      if (rows[i].symbol === symbol) {
+        removedRow = rows[i];
+        removedIndex = i;
+        break;
+      }
+    }
     rows = rows.filter(function (r) { return r.symbol !== symbol; });
+    delete expandedSymbols[symbol];
     refresh();
 
     var form = new FormData();
@@ -246,16 +314,47 @@
       method: 'POST',
       body: form,
       headers: { 'X-Requested-With': 'fetch' }
-    }).catch(function () { /* best-effort */ });
+    })
+      .then(function (res) { return res.json(); })
+      .then(function (data) {
+        if (!data.success) {
+          // Rollback on server failure
+          if (removedRow && removedIndex >= 0) {
+            rows.splice(removedIndex, 0, removedRow);
+            refresh();
+          }
+          showError('Failed to delete ' + symbol + '. Restored.');
+        }
+      })
+      .catch(function () {
+        // Rollback on network failure
+        if (removedRow && removedIndex >= 0) {
+          rows.splice(removedIndex, 0, removedRow);
+          refresh();
+        }
+        showError('Network error — could not delete ' + symbol + '. Restored.');
+      });
   };
 
-  // ---- Add symbol -------------------------------------------
+  // ---- Expose expand toggle for financial-detail.js ---------
+  window.__setExpanded = function (symbol, isExpanded) {
+    if (isExpanded) {
+      expandedSymbols[symbol] = true;
+    } else {
+      delete expandedSymbols[symbol];
+    }
+  };
+
+  // ---- Add symbol (AJAX, insert row without full reload) ----
   if (addForm) {
     addForm.addEventListener('submit', function (e) {
       e.preventDefault();
       var input = document.getElementById('add-symbol-input');
       var symbol = (input.value || '').trim().toUpperCase();
       if (!symbol) return;
+
+      var btn = addForm.querySelector('.btn-add');
+      if (btn) btn.disabled = true;
 
       fetch('/add-symbol', {
         method: 'POST',
@@ -267,15 +366,70 @@
       })
         .then(function (res) { return res.json(); })
         .then(function (data) {
+          if (btn) btn.disabled = false;
           if (data.success) {
             input.value = '';
-            window.location.reload();
+            // Re-fetch dashboard data to get the new symbol's full row
+            fetch('/api/dashboard-data')
+              .then(function (res) { return res.json(); })
+              .then(function (freshData) {
+                rows = freshData.rows || [];
+                if (freshData.refreshTime && refreshTimeEl) {
+                  refreshTimeEl.textContent = 'Last refreshed: ' + freshData.refreshTime;
+                }
+                refresh();
+              })
+              .catch(function () {
+                // Fallback: add a placeholder row
+                rows.push({ symbol: symbol, companyName: 'Loading...', marketCap: '-', lastPrice: '-', dailyChange: '-', dailyChangePct: '-', beta: '-', targetPrice: '-', rating: '-', event: null });
+                refresh();
+              });
           } else {
             showError(data.error || 'Failed to add symbol.');
           }
         })
         .catch(function () {
+          if (btn) btn.disabled = false;
           showError('Network error — could not add symbol.');
+        });
+    });
+  }
+
+  // ---- Share watchlist (admin only) -------------------------
+  var shareForm = document.getElementById('share-form');
+  if (shareForm) {
+    shareForm.addEventListener('submit', function (e) {
+      e.preventDefault();
+      var emailInput = document.getElementById('share-email-input');
+      var msgEl = document.getElementById('share-msg');
+      var email = (emailInput.value || '').trim();
+      if (!email) return;
+
+      fetch('/api/share-watchlist', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Requested-With': 'fetch'
+        },
+        body: JSON.stringify({ email: email })
+      })
+        .then(function (res) { return res.json(); })
+        .then(function (data) {
+          if (msgEl) {
+            msgEl.textContent = data.message || data.error || 'Done.';
+            msgEl.className = 'share-msg ' + (data.success ? 'share-success' : 'share-error');
+            msgEl.style.display = '';
+            setTimeout(function () { msgEl.style.display = 'none'; }, 4000);
+          }
+          if (data.success) emailInput.value = '';
+        })
+        .catch(function () {
+          if (msgEl) {
+            msgEl.textContent = 'Network error.';
+            msgEl.className = 'share-msg share-error';
+            msgEl.style.display = '';
+            setTimeout(function () { msgEl.style.display = 'none'; }, 4000);
+          }
         });
     });
   }

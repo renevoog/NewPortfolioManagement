@@ -3,7 +3,7 @@ const bcrypt = require('bcryptjs');
 const mongoose = require('mongoose');
 const connectionToTheDatabase = require('../database/database');
 const { getStockRows } = require('../services/stockAggregator');
-const { getTrackedSymbols, initializeTrackedAssets, addSymbol, removeSymbol } = require('../services/trackedAssetsService');
+const { getTrackedSymbols, getTrackedSymbolMap, initializeTrackedAssets, addSymbol, removeSymbol, shareWatchlist, isAdmin } = require('../services/trackedAssetsService');
 const { getFinancialHistory } = require('../services/yahoo/yahooFinancialService');
 
 //Load userModel
@@ -124,14 +124,20 @@ exports.new_registrationController_POST = async(req, res, next) => {
 // GET /home — renders the shell instantly (spinner visible), data loaded via AJAX
 exports.new_homeController_GET = async(req, res, next) => {
   try {
+    const userId = req.session.passport.user;
+    const admin = await isAdmin(userId);
     res.render('home', {
       userName: req.user ? req.user.name : null,
-      pageTitle: 'Dashboard'
+      pageTitle: 'Dashboard',
+      isAdmin: admin
     });
   } catch (err) {
     return next(err);
   }
 };
+
+// Session-based dashboard cache (avoids re-fetching on every page load within same session)
+const DASHBOARD_CACHE_TTL = 2 * 60 * 1000; // 2 minutes
 
 // GET /api/dashboard-data — returns JSON rows (called by client JS)
 exports.new_dashboardDataController_GET = async(req, res, next) => {
@@ -140,10 +146,32 @@ exports.new_dashboardDataController_GET = async(req, res, next) => {
 
     await initializeTrackedAssets(userId);
     const trackedSymbols = await getTrackedSymbols(userId);
-    const rows = await getStockRows(trackedSymbols);
+    const dbSymbolMap = await getTrackedSymbolMap(userId);
+
+    // Check session cache
+    const sessionCache = req.session.dashboardCache;
+    const now = Date.now();
+    if (sessionCache && sessionCache.ts && (now - sessionCache.ts) < DASHBOARD_CACHE_TTL) {
+      const cachedSymbols = sessionCache.symbols || [];
+      if (JSON.stringify(cachedSymbols) === JSON.stringify(trackedSymbols)) {
+        return res.json({ rows: sessionCache.rows, refreshTime: sessionCache.refreshTime, cached: true });
+      }
+    }
+
+    const rows = await getStockRows(trackedSymbols, dbSymbolMap);
 
     const { formatEstoniaTime } = require('../services/formatters');
-    res.json({ rows: rows, refreshTime: formatEstoniaTime(new Date()) });
+    const refreshTime = formatEstoniaTime(new Date());
+
+    // Store in session
+    req.session.dashboardCache = {
+      rows: rows,
+      refreshTime: refreshTime,
+      symbols: trackedSymbols,
+      ts: now
+    };
+
+    res.json({ rows: rows, refreshTime: refreshTime });
   } catch (err) {
     console.log('Dashboard data error:', err.message);
     res.json({ rows: [], error: 'Failed to load dashboard data.', refreshTime: null });
@@ -157,6 +185,9 @@ exports.new_addSymbolController_POST = async(req, res, next) => {
     const { symbol } = req.body;
 
     const result = await addSymbol(userId, symbol);
+
+    // Invalidate session cache
+    if (result.success) delete req.session.dashboardCache;
 
     if (req.headers['x-requested-with'] === 'fetch') {
       return res.json(result);
@@ -180,6 +211,9 @@ exports.new_deleteSymbolController_POST = async(req, res, next) => {
     const { symbol } = req.body;
     await removeSymbol(userId, symbol);
 
+    // Invalidate session cache
+    delete req.session.dashboardCache;
+
     // If called via fetch (no redirect expected), return JSON
     if (req.headers['x-requested-with'] === 'fetch') {
       return res.json({ success: true });
@@ -187,6 +221,9 @@ exports.new_deleteSymbolController_POST = async(req, res, next) => {
     res.redirect('/home');
   } catch (err) {
     console.log('Delete symbol error:', err.message);
+    if (req.headers['x-requested-with'] === 'fetch') {
+      return res.json({ success: false, error: 'Failed to delete symbol.' });
+    }
     return next(err);
   }
 };
@@ -205,6 +242,9 @@ exports.new_debugStocksController_GET = async(req, res, next) => {
   }
 };
 
+// Session cache TTL for financial detail
+const DETAIL_CACHE_TTL = 10 * 60 * 1000; // 10 minutes
+
 // GET /api/assets/:symbol/financial-history — lazy-loaded financial detail
 exports.new_financialHistoryController_GET = async(req, res, next) => {
   try {
@@ -213,7 +253,20 @@ exports.new_financialHistoryController_GET = async(req, res, next) => {
       return res.status(400).json({ error: 'Symbol is required.' });
     }
 
-    const data = await getFinancialHistory(symbol.trim());
+    const sym = symbol.trim();
+
+    // Check session cache
+    if (!req.session.detailCache) req.session.detailCache = {};
+    const cached = req.session.detailCache[sym];
+    if (cached && cached.ts && (Date.now() - cached.ts) < DETAIL_CACHE_TTL) {
+      return res.json(cached.data);
+    }
+
+    const data = await getFinancialHistory(sym);
+
+    // Store in session
+    req.session.detailCache[sym] = { data: data, ts: Date.now() };
+
     res.json(data);
   } catch (err) {
     console.log('Financial history error for', req.params.symbol + ':', err.message);
@@ -233,6 +286,24 @@ exports.new_financialHistoryController_GET = async(req, res, next) => {
       analystSummary: { available: false },
       error: msg
     });
+  }
+};
+
+// POST /api/share-watchlist — admin shares watchlist to another user
+exports.new_shareWatchlistController_POST = async(req, res, next) => {
+  try {
+    const userId = req.session.passport.user;
+    const { email } = req.body;
+
+    if (!email || !email.trim()) {
+      return res.json({ success: false, error: 'Email is required.' });
+    }
+
+    const result = await shareWatchlist(userId, email.trim());
+    return res.json(result);
+  } catch (err) {
+    console.log('Share watchlist error:', err.message);
+    return res.json({ success: false, error: 'Failed to share watchlist.' });
   }
 };
 
