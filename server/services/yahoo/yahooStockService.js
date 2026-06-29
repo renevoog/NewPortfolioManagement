@@ -38,20 +38,36 @@ const batchQuotes = async (yahooSymbols) => {
 const getAnalystData = async (yahooSymbol) => {
   try {
     const summary = await quoteSummary(yahooSymbol, {
-      modules: ['financialData', 'summaryDetail']
+      modules: ['financialData', 'summaryDetail', 'defaultKeyStatistics']
     });
 
     const fd = summary.financialData || {};
     const sd = summary.summaryDetail || {};
+    const ks = summary.defaultKeyStatistics || {};
+
+    // Dividend yield is a fraction (0.0044 = 0.44%); prefer dividendYield, fall back to trailing
+    const dy = rawVal(sd.dividendYield);
+    const dyTrailing = rawVal(sd.trailingAnnualDividendYield);
+
+    // PEG: defaultKeyStatistics, with trailingPegRatio fallback
+    const peg = rawVal(ks.pegRatio);
+    const pegTrailing = rawVal(ks.trailingPegRatio);
 
     return {
       targetPrice: rawVal(fd.targetMeanPrice),
       rating: fd.recommendationKey || null,
       numberOfAnalysts: rawVal(fd.numberOfAnalystOpinions),
-      beta: rawVal(sd.beta)
+      beta: rawVal(sd.beta),
+      forwardPE: rawVal(sd.forwardPE),
+      pegRatio: peg !== null ? peg : pegTrailing,
+      dividendYield: dy !== null ? dy : dyTrailing,
+      payoutRatio: rawVal(sd.payoutRatio)
     };
   } catch (err) {
-    return { targetPrice: null, rating: null, numberOfAnalysts: null, beta: null };
+    return {
+      targetPrice: null, rating: null, numberOfAnalysts: null, beta: null,
+      forwardPE: null, pegRatio: null, dividendYield: null, payoutRatio: null
+    };
   }
 };
 

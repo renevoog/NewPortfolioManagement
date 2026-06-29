@@ -5,6 +5,7 @@ const connectionToTheDatabase = require('../database/database');
 const { getStockRows } = require('../services/stockAggregator');
 const { getTrackedSymbols, getTrackedSymbolMap, initializeTrackedAssets, addSymbol, removeSymbol, shareWatchlist, isAdmin } = require('../services/trackedAssetsService');
 const { getFinancialHistory } = require('../services/yahoo/yahooFinancialService');
+const { getColumnPreferences, saveColumnPreferences } = require('../services/userPreferencesService');
 
 //Load userModel
 const { userModel } = require('../model/models');
@@ -126,10 +127,12 @@ exports.new_homeController_GET = async(req, res, next) => {
   try {
     const userId = req.session.passport.user;
     const admin = await isAdmin(userId);
+    const savedColumns = await getColumnPreferences(userId);
     res.render('home', {
       userName: req.user ? req.user.name : null,
       pageTitle: 'Dashboard',
-      isAdmin: admin
+      isAdmin: admin,
+      savedColumns: savedColumns
     });
   } catch (err) {
     return next(err);
@@ -304,6 +307,19 @@ exports.new_shareWatchlistController_POST = async(req, res, next) => {
   } catch (err) {
     console.log('Share watchlist error:', err.message);
     return res.json({ success: false, error: 'Failed to share watchlist.' });
+  }
+};
+
+// POST /api/column-preferences — persist the user's visible/hidden columns
+exports.new_saveColumnPreferencesController_POST = async(req, res, next) => {
+  try {
+    const userId = req.session.passport.user;
+    const hidden = req.body && req.body.hidden;
+    const saved = await saveColumnPreferences(userId, hidden);
+    return res.json({ success: true, hidden: saved });
+  } catch (err) {
+    console.log('Save column preferences error:', err.message);
+    return res.json({ success: false, error: 'Failed to save column preferences.' });
   }
 };
 

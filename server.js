@@ -8,14 +8,19 @@ const flash = require('connect-flash');
 const session = require('express-session');
 const passport = require('passport');
 const MongoDBSession = require('connect-mongodb-session')(session);
+const isProduction = process.env.NODE_ENV === 'production';
 
 //Passport config
 require('./config/passport')(passport);
 
 //Control if the environment is production or dev
-if (process.env.NODE_ENV !== 'production') {
+if (!isProduction) {
   const dotenv = require('dotenv');
   dotenv.config({ path: 'config.env' });
+}
+
+if (isProduction) {
+  app.set('trust proxy', 1);
 }
 
 //Connection to the database
@@ -35,7 +40,11 @@ const sessionStore = new MongoDBSession({
 app.use(cookieParser(process.env.cookieParserKey));
 app.use(session({
   secret: process.env.cookieParserKey,
-  cookie: { maxAge: 1000 * 60 * 60 * 24 },
+  cookie: {
+    maxAge: 1000 * 60 * 60 * 24,
+    secure: isProduction,
+    sameSite: 'lax'
+  },
   resave: false,
   saveUninitialized: false,
   store: sessionStore,
@@ -67,7 +76,8 @@ app.use('/', Router);
 
 //Running of the server
 var PORT = process.env.PORT || 8080;
+var HOST = '0.0.0.0';
 
-app.listen(PORT, () => {
-  console.log(`Connection successfully established http://localhost:${PORT}`);
+app.listen(PORT, HOST, () => {
+  console.log(`Connection successfully established on ${HOST}:${PORT}`);
 });

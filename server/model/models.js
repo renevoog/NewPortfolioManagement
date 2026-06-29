@@ -25,6 +25,13 @@ const userSchema = new mongoose.Schema({
     type: String,
     enum: ['user', 'admin'],
     default: 'user'
+  },
+
+  // Saved hidden dashboard-column keys (per user). `undefined` = never saved,
+  // so the client falls back to its local state; an array (incl. empty) = saved.
+  columnPreferences: {
+    type: [String],
+    default: undefined
   }
 });
 

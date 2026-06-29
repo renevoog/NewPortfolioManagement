@@ -123,6 +123,36 @@ const insights = async (symbol) => {
   return (data && data.finance && data.finance.result) || {};
 };
 
+// Historical price chart for a single symbol.
+// range: 1d,5d,1mo,3mo,6mo,1y,2y,5y,10y,ytd,max — interval: 1d, 1wk, 1mo, ...
+// Returns the raw chart result object: { meta, timestamp:[], indicators:{ quote:[{close}], adjclose:[{adjclose}] } }
+const chart = async (symbol, range, interval) => {
+  await initCrumb();
+
+  const r = range || '2y';
+  const iv = interval || '1d';
+  const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?range=${r}&interval=${iv}&crumb=${encodeURIComponent(_crumb || '')}`;
+
+  const res = await fetch(url, {
+    headers: {
+      'User-Agent': UA,
+      'Cookie': _cookie || ''
+    }
+  });
+
+  if (!res.ok) {
+    if (res.status === 401 || res.status === 403) {
+      _crumb = null;
+      _cookie = null;
+    }
+    throw new Error(`Yahoo chart failed: ${res.status}`);
+  }
+
+  const data = await res.json();
+  const results = data && data.chart && data.chart.result;
+  return (results && results[0]) || null;
+};
+
 // Search for a symbol
 const search = async (query) => {
   const url = `https://query2.finance.yahoo.com/v1/finance/search?q=${encodeURIComponent(query)}&quotesCount=5&newsCount=0`;
@@ -141,4 +171,5 @@ const search = async (query) => {
 exports.quote = quote;
 exports.quoteSummary = quoteSummary;
 exports.insights = insights;
+exports.chart = chart;
 exports.search = search;

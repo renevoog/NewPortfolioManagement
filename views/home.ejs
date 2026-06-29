@@ -13,11 +13,24 @@
     <!-- Dashboard content (hidden until data arrives) -->
     <div id="dashboard-content" class="dashboard-content" style="display:none;">
 
-      <!-- Toolbar: search + add -->
+      <!-- Toolbar: search + columns + add -->
       <div class="toolbar">
         <div class="search-box">
           <i class="bi bi-search"></i>
           <input type="text" id="search-input" placeholder="Search symbol or name..." />
+        </div>
+        <div class="col-toggle">
+          <button type="button" class="btn-coltoggle" id="col-toggle-btn" aria-haspopup="true" aria-expanded="false">
+            <i class="bi bi-layout-three-columns"></i> Columns
+          </button>
+          <div class="col-toggle-menu" id="col-toggle-menu" style="display:none;">
+            <div class="col-toggle-list" id="col-toggle-list"></div>
+            <div class="col-toggle-actions">
+              <button type="button" class="col-toggle-reset" id="col-toggle-reset">Show all</button>
+              <span class="col-toggle-status" id="col-toggle-status"></span>
+              <button type="button" class="col-toggle-save" id="col-toggle-save"><i class="bi bi-save"></i> Save</button>
+            </div>
+          </div>
         </div>
         <form class="add-form" id="add-form">
           <input type="text" name="symbol" id="add-symbol-input" placeholder="Add symbol (e.g. AAPL)" required />
@@ -43,15 +56,27 @@
               <tr>
                 <th class="col-expand"></th>
                 <th>Symbol</th>
-                <th>Company</th>
-                <th class="sortable col-num" data-col="marketCap">Mkt Cap</th>
-                <th class="col-num">Price</th>
-                <th class="sortable col-num" data-col="dailyChange">Change</th>
-                <th class="sortable col-num" data-col="dailyChangePct">Change%</th>
-                <th class="sortable col-num" data-col="beta">Beta</th>
-                <th class="col-num">Target</th>
-                <th>Rating</th>
-                <th>Events</th>
+                <th data-col-key="company" data-col-label="Company">Company</th>
+                <th class="sortable col-num" data-col="marketCap" data-col-key="marketCap" data-col-label="Market Cap" data-tip="Turukapitalisatsioon — ettevõtte koguväärtus börsil (aktsia hind × aktsiate arv). Suurem number = suurem ja üldiselt stabiilsem firma.">Mkt Cap</th>
+                <th class="col-num" data-col-key="price" data-col-label="Price" data-tip="Viimane kauplemishind antud valuutas.">Price</th>
+                <th class="sortable col-num" data-col="dailyChange" data-col-key="dailyChange" data-col-label="Change (abs.)" data-tip="Tänane hinnamuutus rahas, võrreldes eelmise päeva sulgemishinnaga.">Change</th>
+                <th class="sortable col-num" data-col="dailyChangePct" data-col-key="dailyChangePct" data-col-label="24h Change" data-tip="Tänane hinnamuutus protsentides. Roheline = tõus, punane = langus.">24h</th>
+                <th class="sortable col-num" data-col="change7d" data-col-key="change7d" data-col-label="7-Day Change" data-tip="Hinnamuutus viimase 7 päeva jooksul.">7D</th>
+                <th class="sortable col-num" data-col="change1mo" data-col-key="change1mo" data-col-label="1-Month Change" data-tip="Hinnamuutus viimase 1 kuu jooksul.">1M</th>
+                <th class="sortable col-num" data-col="change3mo" data-col-key="change3mo" data-col-label="3-Month Change" data-tip="Hinnamuutus viimase 3 kuu jooksul.">3M</th>
+                <th class="sortable col-num" data-col="change6mo" data-col-key="change6mo" data-col-label="6-Month Change" data-tip="Hinnamuutus viimase 6 kuu jooksul.">6M</th>
+                <th class="sortable col-num" data-col="change1y" data-col-key="change1y" data-col-label="1-Year Change" data-tip="Hinnamuutus viimase 1 aasta jooksul. Näitab „-”, kui aktsial pole nii pikka kauplemisajalugu (nt värske IPO).">1Y</th>
+                <th class="sortable col-num" data-col="range52w" data-col-key="range52w" data-col-label="52-Week Position" data-tip="52-nädala positsioon: kus praegune hind asub aasta madalaima (0%) ja kõrgeima (100%) vahel. Madal number = tippudest maas (võib olla soodne või nõrk), kõrge = tippude lähedal.">52W</th>
+                <th class="sortable col-num" data-col="vs200d" data-col-key="vs200d" data-col-label="vs 200-Day Avg" data-tip="Hind võrreldes 200 päeva keskmisega — lihtne trendinäitaja. Plussmärk = hind üle pikaajalise keskmise (tõusutrend), miinus = alla (langustrend).">vs 200D</th>
+                <th class="sortable col-num" data-col="forwardPE" data-col-key="forwardPE" data-col-label="Forward P/E" data-tip="Forward P/E = hind jagatud järgmise aasta oodatava kasumiga (EPS). Madalam = odavam. Umbkaudu: alla 15 = odav, 15–25 = keskmine, 30+ = kallis. Võrdle samas sektoris.">Fwd P/E</th>
+                <th class="sortable col-num" data-col="peg" data-col-key="peg" data-col-label="PEG Ratio" data-tip="PEG = P/E jagatud kasumikasvuga. Arvestab kasvu, seega võrdleb kasvavaid ja küpseid firmasid õiglasemalt. Alla 1 = kasvu arvestades odav, üle 2 = kallis.">PEG</th>
+                <th class="sortable col-num" data-col="divYield" data-col-key="divYield" data-col-label="Dividend Yield" data-tip="Dividenditootlus — aastane dividend protsendina aktsia hinnast. Näitab „-”, kui firma dividendi ei maksa. Kõrge tootlus võib tähendada head tulu või langenud hinda.">Div Yield</th>
+                <th class="sortable col-num" data-col="payout" data-col-key="payout" data-col-label="Payout Ratio" data-tip="Väljamaksemäär — kui suur osa kasumist makstakse dividendideks. Madal = ruumi kasvuks ja turvavaru; üle 100% = maksab rohkem kui teenib (sageli jätkusuutmatu).">Payout</th>
+                <th class="sortable col-num" data-col="beta" data-col-key="beta" data-col-label="Beta" data-tip="Beta — kui palju aktsia kõigub turu suhtes. 1 = liigub turuga sama palju; üle 1 = volatiilsem ja riskantsem; alla 1 = rahulikum; alla 0 = liigub turule vastassuunas.">Beta</th>
+                <th class="col-num" data-col-key="target" data-col-label="Analyst Target" data-tip="Analüütikute keskmine 12 kuu sihthind. Nende ootus, kuhu aktsia hind võiks liikuda.">Target</th>
+                <th class="sortable col-num" data-col="upside" data-col-key="upside" data-col-label="Upside to Target" data-tip="Tõusupotentsiaal — kui mitu protsenti on sihthind praegusest hinnast kõrgemal (+) või madalamal (-). Plussmärk = analüütikud ootavad keskmiselt tõusu.">Upside</th>
+                <th data-col-key="rating" data-col-label="Analyst Rating" data-tip="Analüütikute koondsoovitus: Strong Buy → Buy → Hold → Sell → Strong Sell.">Rating</th>
+                <th data-col-key="events" data-col-label="Events" data-tip="Lähenevad või hiljutised sündmused: tulemuste avaldamine (earnings), ebatavaliselt suured päevamuutused ja olulised uudised.">Events</th>
                 <th></th>
               </tr>
             </thead>
@@ -66,6 +91,7 @@
 
     </div><!-- /dashboard-content -->
 
+    <script>window.__savedColumns = <%- JSON.stringify(typeof savedColumns === 'undefined' ? null : savedColumns) %>;</script>
     <script src="/js/dashboard.js"></script>
     <script src="/js/financial-detail.js"></script>
 

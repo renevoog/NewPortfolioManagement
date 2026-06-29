@@ -19,6 +19,7 @@ router.post('/add-symbol', ensureAuthenticated, controller.new_addSymbolControll
 router.post('/delete-symbol', ensureAuthenticated, controller.new_deleteSymbolController_POST);
 router.get('/api/assets/:symbol/financial-history', ensureAuthenticated, controller.new_financialHistoryController_GET);
 router.post('/api/share-watchlist', ensureAuthenticated, controller.new_shareWatchlistController_POST);
+router.post('/api/column-preferences', ensureAuthenticated, controller.new_saveColumnPreferencesController_POST);
 router.get('/debug/stocks', ensureAuthenticated, controller.new_debugStocksController_GET);
 
 router.get('/health/db', controller.new_dbHealthController_GET);

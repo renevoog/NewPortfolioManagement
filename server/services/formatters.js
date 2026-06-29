@@ -52,6 +52,20 @@ const formatPercent = (value) => {
   return sign + value.toFixed(2) + '%';
 };
 
+// Format percent without a leading sign: "1.23%" or "-" (for yields, ranges, payout)
+const formatPercentPlain = (value, decimals) => {
+  if (value === null || value === undefined || isNaN(value)) return '-';
+  const d = (decimals === undefined) ? 2 : decimals;
+  return value.toFixed(d) + '%';
+};
+
+// Format a plain ratio like P/E or PEG: fixed decimals or "-"
+const formatRatio = (value, decimals) => {
+  if (value === null || value === undefined || isNaN(value)) return '-';
+  const d = (decimals === undefined) ? 2 : decimals;
+  return value.toFixed(d);
+};
+
 // Format beta: 2 decimals
 const formatBeta = (value) => {
   if (value === null || value === undefined || isNaN(value)) return '-';
@@ -136,6 +150,8 @@ exports.formatMarketCap = formatMarketCap;
 exports.formatPrice = formatPrice;
 exports.formatDailyChange = formatDailyChange;
 exports.formatPercent = formatPercent;
+exports.formatPercentPlain = formatPercentPlain;
+exports.formatRatio = formatRatio;
 exports.formatBeta = formatBeta;
 exports.formatTargetPrice = formatTargetPrice;
 exports.formatEstoniaTime = formatEstoniaTime;

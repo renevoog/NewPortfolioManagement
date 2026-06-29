@@ -1,7 +1,8 @@
 const { resolveInstruments, getRatesForInstrumentIds, getInstrumentDetails } = require('./etoro/etoroStockService');
 const { batchQuotes, batchAnalystData } = require('./yahoo/yahooStockService');
+const { batchPriceChanges, emptyChanges } = require('./yahoo/yahooHistoryService');
 const { getYahooSymbol } = require('./symbolMap');
-const { formatMarketCap, formatPrice, formatDailyChange, formatPercent, formatBeta, formatTargetPrice, formatEstoniaTime } = require('./formatters');
+const { formatMarketCap, formatPrice, formatDailyChange, formatPercent, formatPercentPlain, formatRatio, formatBeta, formatTargetPrice, formatEstoniaTime } = require('./formatters');
 const { buildEvent } = require('./eventService');
 
 // Build a mapping of tvSymbol -> yahooSymbol for a list of TV symbols
@@ -31,14 +32,17 @@ const getStockRows = async (tvSymbols, dbSymbolMap) => {
   // Phase 1: Fetch everything from Yahoo
   let yahooQuotes = {};
   let yahooAnalyst = {};
+  let yahooChanges = {};
 
   try {
-    const [quotes, analyst] = await Promise.all([
+    const [quotes, analyst, changes] = await Promise.all([
       batchQuotes(yahooSymbols),
-      batchAnalystData(yahooSymbols)
+      batchAnalystData(yahooSymbols),
+      batchPriceChanges(yahooSymbols)
     ]);
     yahooQuotes = quotes;
     yahooAnalyst = analyst;
+    yahooChanges = changes;
   } catch (err) {
     console.log('Yahoo data fetch error:', err.message);
   }
@@ -71,6 +75,7 @@ const getStockRows = async (tvSymbols, dbSymbolMap) => {
     const yahooSym = yahooMap[tvSymbol];
     const yQuote = yahooQuotes[yahooSym] || null;
     const yAnalyst = yahooAnalyst[yahooSym] || null;
+    const changes = yahooChanges[yahooSym] || emptyChanges();
     const etoro = etoroData[tvSymbol] || null;
 
     const raw = extractRawValues(yQuote, yAnalyst, etoro);
@@ -83,8 +88,20 @@ const getStockRows = async (tvSymbols, dbSymbolMap) => {
       lastPrice: formatPrice(raw.lastPrice, raw.currency),
       dailyChange: formatDailyChange(raw.dailyChange, raw.currency),
       dailyChangePct: formatPercent(raw.dailyChangePct),
+      change7d: formatPercent(changes.change7d),
+      change1mo: formatPercent(changes.change1mo),
+      change3mo: formatPercent(changes.change3mo),
+      change6mo: formatPercent(changes.change6mo),
+      change1y: formatPercent(changes.change1y),
+      range52w: formatPercentPlain(raw.range52wPct, 0),
+      vs200d: formatPercent(raw.vs200dPct),
+      forwardPE: formatRatio(raw.forwardPE, 1),
+      peg: formatRatio(raw.pegRatio, 2),
+      divYield: formatPercentPlain(raw.dividendYieldPct, 2),
+      payout: formatPercentPlain(raw.payoutRatioPct, 0),
       beta: formatBeta(raw.beta),
       targetPrice: formatTargetPrice(raw.targetPrice, raw.currency),
+      upside: formatPercent(raw.upsidePct),
       rating: raw.rating || '-',
       event: event
     };
@@ -184,9 +201,49 @@ const extractRawValues = (yQuote, yAnalyst, etoro) => {
     rating = formatRating(etoroDetails.tipranksConsensus);
   }
 
+  // Forward P/E — quote primary, summaryDetail fallback
+  let forwardPE = (yQuote && typeof yQuote.forwardPE === 'number') ? yQuote.forwardPE : null;
+  if (forwardPE === null && yAnalyst && typeof yAnalyst.forwardPE === 'number') {
+    forwardPE = yAnalyst.forwardPE;
+  }
+
+  // PEG ratio (defaultKeyStatistics)
+  const pegRatio = (yAnalyst && typeof yAnalyst.pegRatio === 'number') ? yAnalyst.pegRatio : null;
+
+  // Dividend yield & payout ratio — stored as fractions by Yahoo, convert to %
+  const dividendYieldPct = (yAnalyst && typeof yAnalyst.dividendYield === 'number')
+    ? yAnalyst.dividendYield * 100 : null;
+  const payoutRatioPct = (yAnalyst && typeof yAnalyst.payoutRatio === 'number')
+    ? yAnalyst.payoutRatio * 100 : null;
+
+  // Upside to analyst target: (target - price) / price
+  let upsidePct = null;
+  if (targetPrice !== null && lastPrice !== null && lastPrice > 0) {
+    upsidePct = ((targetPrice - lastPrice) / lastPrice) * 100;
+  }
+
+  // 52-week range position: 0% = at the year low, 100% = at the year high
+  let range52wPct = null;
+  const hi52 = (yQuote && typeof yQuote.fiftyTwoWeekHigh === 'number') ? yQuote.fiftyTwoWeekHigh : null;
+  const lo52 = (yQuote && typeof yQuote.fiftyTwoWeekLow === 'number') ? yQuote.fiftyTwoWeekLow : null;
+  if (lastPrice !== null && hi52 !== null && lo52 !== null && hi52 > lo52) {
+    range52wPct = ((lastPrice - lo52) / (hi52 - lo52)) * 100;
+    if (range52wPct < 0) range52wPct = 0;
+    if (range52wPct > 100) range52wPct = 100;
+  }
+
+  // Price vs 200-day moving average: + = above (uptrend), - = below
+  let vs200dPct = null;
+  const ma200 = (yQuote && typeof yQuote.twoHundredDayAverage === 'number') ? yQuote.twoHundredDayAverage : null;
+  if (lastPrice !== null && ma200 !== null && ma200 > 0) {
+    vs200dPct = ((lastPrice - ma200) / ma200) * 100;
+  }
+
   return {
     companyName, currency, marketCap, lastPrice,
-    dailyChange, dailyChangePct, beta, targetPrice, rating
+    dailyChange, dailyChangePct, beta, targetPrice, rating,
+    forwardPE, pegRatio, dividendYieldPct, payoutRatioPct,
+    upsidePct, range52wPct, vs200dPct
   };
 };
 

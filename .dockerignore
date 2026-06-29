@@ -1,0 +1,10 @@
+.git
+.github
+.incident-backup-*
+.vscode
+node_modules
+config.env
+github
+github.pub
+GPT5.4_audit_results.md
+npm-debug.log*

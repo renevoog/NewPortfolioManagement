@@ -165,6 +165,146 @@ main.container-lg {
   margin: -8px 0 8px;
 }
 
+/* --- Column show/hide dropdown ----------------------------- */
+.col-toggle {
+  position: relative;
+}
+
+.btn-coltoggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  background: var(--card-bg);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-family: inherit;
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: border-color .15s, background .15s;
+  white-space: nowrap;
+}
+.btn-coltoggle:hover {
+  border-color: var(--accent);
+  background: #f8fafc;
+}
+.btn-coltoggle i { font-size: 0.95rem; color: var(--text-muted); }
+
+.col-toggle-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 200;
+  min-width: 200px;
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: 0 6px 18px rgba(0,0,0,.12);
+  padding: 8px;
+}
+
+.col-toggle-list {
+  display: flex;
+  flex-direction: column;
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+.col-toggle-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  font-size: 0.82rem;
+  color: var(--text);
+  border-radius: 5px;
+  cursor: pointer;
+  user-select: none;
+}
+.col-toggle-item:hover { background: #f1f5f9; }
+.col-toggle-item input { cursor: pointer; margin: 0; }
+
+.col-toggle-actions {
+  border-top: 1px solid var(--border);
+  margin-top: 6px;
+  padding-top: 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.col-toggle-reset {
+  background: none;
+  border: none;
+  color: var(--accent);
+  font-family: inherit;
+  font-size: 0.8rem;
+  font-weight: 500;
+  cursor: pointer;
+  padding: 2px 4px;
+}
+.col-toggle-reset:hover { text-decoration: underline; }
+
+.col-toggle-status {
+  flex: 1;
+  text-align: right;
+  font-size: 0.74rem;
+  font-weight: 500;
+}
+.col-toggle-status.dirty { color: var(--text-muted); }
+.col-toggle-status.saved { color: #16a34a; }
+.col-toggle-status.error { color: var(--red); }
+
+.col-toggle-save {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: var(--navy);
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  font-family: inherit;
+  font-size: 0.8rem;
+  font-weight: 500;
+  cursor: pointer;
+  padding: 6px 14px;
+  transition: background .15s;
+  white-space: nowrap;
+}
+.col-toggle-save:hover { background: var(--navy-light); }
+.col-toggle-save:disabled { opacity: .6; cursor: default; }
+.col-toggle-save i { font-size: 0.9rem; }
+
+/* --- Header explanation tooltip ---------------------------- */
+.col-tip {
+  position: fixed;
+  z-index: 1000;
+  max-width: 340px;
+  background: #0f172a;
+  color: #e2e8f0;
+  padding: 13px 16px;
+  border-radius: 9px;
+  font-size: 0.9rem;
+  line-height: 1.55;
+  font-weight: 400;
+  text-transform: none;
+  letter-spacing: normal;
+  box-shadow: 0 8px 26px rgba(0,0,0,.32);
+  pointer-events: none;
+}
+.col-tip strong {
+  display: block;
+  margin-bottom: 5px;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #fff;
+}
+
+/* Hint that headers are hoverable for help */
+.stock-table th[data-tip] { cursor: help; }
+
 /* --- Table card --------------------------------------------- */
 .table-card {
   background: var(--card-bg);
