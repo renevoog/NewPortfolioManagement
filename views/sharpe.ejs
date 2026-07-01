@@ -40,10 +40,10 @@
                 </div>
                 <div class="asset-list-grid" id="watchlist-list">
                   <% watchlist.forEach(function (a) { %>
-                    <button type="button" class="asset-row" data-yahoo="<%= a.yahoo %>" data-label="<%= a.tv %>" data-name="<%= a.name %>" title="<%= a.tv %> — <%= a.name %>">
-                      <span class="asset-row-check"><i class="bi bi-check2"></i></span>
-                      <span class="asset-row-sym"><%= a.tv %></span>
-                      <span class="asset-row-name"><%= a.name %></span>
+                    <button type="button" class="wl-row" data-yahoo="<%= a.yahoo %>" data-label="<%= a.tv %>" data-name="<%= a.name %>" title="<%= a.tv %> — <%= a.name %>">
+                      <span class="wl-row-check"><i class="bi bi-check2"></i></span>
+                      <span class="wl-row-sym"><%= a.tv %></span>
+                      <span class="wl-row-name"><%= a.name %></span>
                     </button>
                   <% }); %>
                 </div>

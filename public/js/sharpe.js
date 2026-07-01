@@ -88,7 +88,7 @@
       out.push({ yahoo: yahoo, label: label });
     }
     if (watchlistList) {
-      watchlistList.querySelectorAll('.asset-row.selected').forEach(function (r) {
+      watchlistList.querySelectorAll('.wl-row.selected').forEach(function (r) {
         push(r.getAttribute('data-yahoo'), r.getAttribute('data-label'));
       });
     }
@@ -100,7 +100,7 @@
   function findWatchlistRow(key) {
     var match = null;
     if (watchlistList) {
-      watchlistList.querySelectorAll('.asset-row').forEach(function (r) {
+      watchlistList.querySelectorAll('.wl-row').forEach(function (r) {
         if ((r.getAttribute('data-yahoo') || '').toUpperCase() === key ||
             (r.getAttribute('data-label') || '').toUpperCase() === key) match = r;
       });
@@ -116,7 +116,7 @@
 
     var items = [];
     if (watchlistList) {
-      watchlistList.querySelectorAll('.asset-row.selected').forEach(function (r) {
+      watchlistList.querySelectorAll('.wl-row.selected').forEach(function (r) {
         items.push({ label: r.getAttribute('data-label'), kind: 'wl', row: r });
       });
     }
@@ -172,7 +172,7 @@
 
   if (watchlistList) {
     watchlistList.addEventListener('click', function (e) {
-      var row = e.target.closest('.asset-row');
+      var row = e.target.closest('.wl-row');
       if (!row) return;
       row.classList.toggle('selected');
       refresh();
@@ -183,7 +183,7 @@
     selectAllBtn.addEventListener('click', function () {
       if (!watchlistList) return;
       // Only affect rows currently visible (respects an active filter).
-      watchlistList.querySelectorAll('.asset-row').forEach(function (r) {
+      watchlistList.querySelectorAll('.wl-row').forEach(function (r) {
         if (r.style.display !== 'none') r.classList.add('selected');
       });
       refresh();
@@ -193,7 +193,7 @@
   if (clearBtn) {
     clearBtn.addEventListener('click', function () {
       if (watchlistList) {
-        watchlistList.querySelectorAll('.asset-row.selected').forEach(function (r) {
+        watchlistList.querySelectorAll('.wl-row.selected').forEach(function (r) {
           r.classList.remove('selected');
         });
       }
@@ -223,7 +223,7 @@
   if (listFilter && watchlistList) {
     listFilter.addEventListener('input', function () {
       var q = listFilter.value.trim().toLowerCase();
-      watchlistList.querySelectorAll('.asset-row').forEach(function (r) {
+      watchlistList.querySelectorAll('.wl-row').forEach(function (r) {
         var hay = ((r.getAttribute('data-label') || '') + ' ' + (r.getAttribute('data-name') || '')).toLowerCase();
         r.style.display = (!q || hay.indexOf(q) !== -1) ? '' : 'none';
       });
