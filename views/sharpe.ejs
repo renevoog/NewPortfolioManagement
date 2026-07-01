@@ -1,0 +1,131 @@
+<%- include('partials/header') %>
+
+    <div class="sharpe-page">
+
+      <div class="page-head">
+        <h1>Sharpe Ratio Simulation</h1>
+        <span class="page-subtle">Monte&nbsp;Carlo risk-vs-return frontier for a set of assets over a custom period. Pick assets from your watchlist, or add your own.</span>
+      </div>
+
+      <!-- Parameters -->
+      <div class="sharpe-card">
+        <div class="sharpe-card-head">
+          <h3><i class="bi bi-sliders"></i> Simulation parameters</h3>
+        </div>
+        <div class="sharpe-card-body">
+
+          <!-- Watchlist asset picker -->
+          <div class="field-block">
+            <div class="field-block-head">
+              <label class="field-label">Assets from your watchlist</label>
+              <div class="chip-tools">
+                <button type="button" class="chip-tool" id="assets-select-all">Select all</button>
+                <button type="button" class="chip-tool" id="assets-clear">Clear</button>
+                <span class="chip-count" id="assets-count">0 selected</span>
+              </div>
+            </div>
+            <!-- Selected assets (watchlist + custom), always visible -->
+            <div class="selected-summary" id="selected-summary">
+              <span class="selected-summary-empty" id="selected-summary-empty">No assets selected yet — expand the list below or add your own.</span>
+            </div>
+
+            <% if (watchlist && watchlist.length) { %>
+              <button type="button" class="asset-list-toggle" id="asset-list-toggle" aria-expanded="false">
+                <i class="bi bi-chevron-down"></i><span>Choose from watchlist (<%= watchlist.length %> assets)</span>
+              </button>
+              <div class="asset-list-panel" id="asset-list-panel" hidden>
+                <div class="asset-list-search">
+                  <i class="bi bi-search"></i>
+                  <input type="text" id="asset-list-filter" placeholder="Filter by symbol or name..." autocomplete="off" />
+                </div>
+                <div class="asset-list-grid" id="watchlist-list">
+                  <% watchlist.forEach(function (a) { %>
+                    <button type="button" class="asset-row" data-yahoo="<%= a.yahoo %>" data-label="<%= a.tv %>" data-name="<%= a.name %>" title="<%= a.tv %> — <%= a.name %>">
+                      <span class="asset-row-check"><i class="bi bi-check2"></i></span>
+                      <span class="asset-row-sym"><%= a.tv %></span>
+                      <span class="asset-row-name"><%= a.name %></span>
+                    </button>
+                  <% }); %>
+                </div>
+              </div>
+            <% } else { %>
+              <p class="field-hint">Your watchlist is empty. Add assets on the Dashboard, or use “Other” below.</p>
+            <% } %>
+          </div>
+
+          <!-- Other / custom symbol -->
+          <div class="field-block">
+            <label class="field-label" for="custom-symbol-input">Other — add a custom symbol</label>
+            <div class="custom-add-row">
+              <input type="text" id="custom-symbol-input" class="sharpe-input" placeholder="e.g. NVDA or BTC-USD" autocomplete="off" />
+              <button type="button" class="btn-navy" id="custom-add-btn"><i class="bi bi-plus-lg"></i> Add</button>
+            </div>
+            <p class="field-hint">Custom symbols use the Yahoo Finance ticker directly (same as adding on the Dashboard). They appear in the selection above.</p>
+          </div>
+
+          <!-- Numeric / date parameters -->
+          <div class="field-row">
+            <div class="field-block">
+              <label class="field-label" for="sharpe-asset-type">Asset type</label>
+              <select class="sharpe-input" id="sharpe-asset-type">
+                <option value="stocks" selected>Stocks (252 trading days)</option>
+                <option value="crypto">Crypto (365 days)</option>
+              </select>
+            </div>
+            <div class="field-block">
+              <label class="field-label" for="sharpe-iterations">Iterations</label>
+              <input type="number" class="sharpe-input" id="sharpe-iterations" min="500" max="100000" step="500" value="5000" placeholder="e.g. 5000" />
+            </div>
+          </div>
+
+          <div class="field-row">
+            <div class="field-block">
+              <label class="field-label" for="sharpe-start-date">Start date</label>
+              <input type="date" class="sharpe-input" id="sharpe-start-date" />
+            </div>
+            <div class="field-block">
+              <label class="field-label" for="sharpe-end-date">End date</label>
+              <input type="date" class="sharpe-input" id="sharpe-end-date" />
+            </div>
+          </div>
+
+          <div class="sharpe-actions">
+            <button type="button" class="btn-run" id="sharpe-run-btn">
+              <i class="bi bi-play-fill"></i><span>Run simulation</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Loading -->
+      <div id="sharpe-loading" class="sharpe-loading" style="display:none;">
+        <div class="loader-dots">
+          <span></span><span></span><span></span><span></span>
+        </div>
+        <p class="loader-text">Fetching prices &amp; running the simulation…</p>
+      </div>
+
+      <!-- Result (hidden until a run succeeds) -->
+      <div class="sharpe-result" id="sharpe-result" style="display:none;">
+        <div class="sharpe-canvas-card">
+          <canvas id="sharpe-canvas"></canvas>
+        </div>
+        <div class="sharpe-data-card">
+          <h4>Portfolio point</h4>
+          <div id="sharpe-main-values"></div>
+          <h4 class="mt-block">Weights</h4>
+          <div id="sharpe-weights" class="muted">Hover a point on the chart to inspect a portfolio.</div>
+        </div>
+      </div>
+
+      <!-- Idle / error (shown before first run) -->
+      <div class="sharpe-idle" id="sharpe-idle">
+        <div class="sharpe-idle-main" id="sharpe-idle-main">Select assets and run the simulation</div>
+        <div class="sharpe-idle-detail" id="sharpe-idle-detail"></div>
+      </div>
+
+    </div><!-- /sharpe-page -->
+
+    <script src="/js/sharpe.js"></script>
+
+<%- include('partials/footer') %>

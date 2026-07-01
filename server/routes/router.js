@@ -22,6 +22,9 @@ router.post('/api/share-watchlist', ensureAuthenticated, controller.new_shareWat
 router.post('/api/column-preferences', ensureAuthenticated, controller.new_saveColumnPreferencesController_POST);
 router.get('/debug/stocks', ensureAuthenticated, controller.new_debugStocksController_GET);
 
+router.get('/sharpe', ensureAuthenticated, controller.new_sharpeViewController_GET);
+router.get('/api/sharpe-data', ensureAuthenticated, controller.new_sharpeGraphController_GET);
+
 router.get('/health/db', controller.new_dbHealthController_GET);
 
 module.exports = router;

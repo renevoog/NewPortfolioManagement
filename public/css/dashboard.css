@@ -1185,3 +1185,479 @@ main.container-lg {
     height: 220px;
   }
 }
+
+/* ============================================================
+   Navbar tabs (Dashboard / Sharpe Ratio)
+   ============================================================ */
+.navbar-left {
+  display: flex;
+  align-items: center;
+  gap: 22px;
+  min-width: 0;
+}
+
+.nav-tabs-bar {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.nav-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: 7px;
+  color: #94a3b8;
+  font-size: 0.85rem;
+  font-weight: 500;
+  text-decoration: none;
+  transition: background .15s, color .15s;
+  white-space: nowrap;
+}
+.nav-tab i { font-size: 0.95rem; }
+.nav-tab:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, .07);
+}
+.nav-tab.active {
+  color: #fff;
+  background: var(--navy-light);
+}
+
+/* ============================================================
+   Sharpe Ratio page
+   ============================================================ */
+.sharpe-page {
+  max-width: 1080px;
+  margin: 0 auto;
+}
+
+.page-head {
+  margin-bottom: 18px;
+}
+.page-head h1 {
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin: 0 0 4px;
+  color: var(--text);
+}
+.page-subtle {
+  display: block;
+  font-size: 0.86rem;
+  color: var(--text-muted);
+  max-width: 720px;
+}
+
+/* --- Parameters card --------------------------------------- */
+.sharpe-card {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, .06);
+  overflow: hidden;
+  margin-bottom: 22px;
+}
+.sharpe-card-head {
+  padding: 14px 20px;
+  border-bottom: 1px solid var(--border);
+  background: #fbfcfe;
+}
+.sharpe-card-head h3 {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.sharpe-card-head h3 i { color: var(--accent); }
+.sharpe-card-body {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* --- Fields ------------------------------------------------- */
+.field-block { display: flex; flex-direction: column; gap: 8px; }
+
+.field-block-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.field-label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin: 0;
+}
+
+.field-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.field-hint {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  margin: 2px 0 0;
+}
+
+.sharpe-input {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-family: inherit;
+  font-size: 0.88rem;
+  background: var(--card-bg);
+  color: var(--text);
+  transition: border-color .15s, box-shadow .15s;
+}
+.sharpe-input:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, .12);
+}
+.sharpe-input.invalid {
+  border-color: var(--red);
+  box-shadow: 0 0 0 2px rgba(239, 68, 68, .12);
+}
+
+/* --- Watchlist chips --------------------------------------- */
+.chip-tools {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.chip-tool {
+  background: none;
+  border: none;
+  color: var(--accent);
+  font-family: inherit;
+  font-size: 0.8rem;
+  font-weight: 500;
+  cursor: pointer;
+  padding: 0;
+}
+.chip-tool:hover { text-decoration: underline; }
+.chip-count {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+/* Selected assets summary strip (watchlist picks + custom) */
+.selected-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  min-height: 36px;
+  padding: 8px;
+  border: 1px dashed var(--border);
+  border-radius: 8px;
+  background: #fbfcfe;
+}
+.selected-summary-empty {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  padding: 0 4px;
+}
+.selected-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 6px 5px 12px;
+  border-radius: 20px;
+  background: var(--navy);
+  color: #fff;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+.selected-chip-custom { background: var(--accent); }
+.selected-chip-x {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border: none;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, .22);
+  color: #fff;
+  font-size: 0.95rem;
+  line-height: 1;
+  cursor: pointer;
+  transition: background .12s;
+}
+.selected-chip-x:hover { background: rgba(255, 255, 255, .42); }
+
+/* --- Custom ("Other") symbols ------------------------------ */
+.custom-add-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.custom-add-row .sharpe-input { max-width: 280px; }
+
+.btn-navy {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  background: var(--navy);
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  font-family: inherit;
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background .15s;
+}
+.btn-navy:hover { background: var(--navy-light); }
+
+/* --- Watchlist expandable, multi-column list --------------- */
+.asset-list-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+  padding: 8px 14px;
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text);
+  font-family: inherit;
+  font-size: 0.84rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: border-color .15s, background .15s;
+}
+.asset-list-toggle:hover { border-color: var(--accent); background: #f8fafc; }
+.asset-list-toggle i { transition: transform .18s; color: var(--text-muted); }
+.asset-list-toggle.open i { transform: rotate(180deg); }
+
+.asset-list-panel {
+  margin-top: 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px;
+  background: var(--card-bg);
+}
+
+.asset-list-search {
+  position: relative;
+  margin-bottom: 10px;
+}
+.asset-list-search i {
+  position: absolute;
+  left: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  pointer-events: none;
+}
+.asset-list-search input {
+  width: 100%;
+  padding: 7px 12px 7px 32px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-family: inherit;
+  font-size: 0.84rem;
+  background: var(--bg);
+}
+.asset-list-search input:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, .12);
+  background: var(--card-bg);
+}
+
+.asset-list-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+  gap: 6px;
+  max-height: 320px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.asset-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 10px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+  font-family: inherit;
+  transition: background .1s, border-color .1s;
+  min-width: 0;
+}
+.asset-row:hover { background: #f1f5f9; }
+.asset-row.selected {
+  background: rgba(59, 130, 246, .08);
+  border-color: var(--accent);
+}
+.asset-row-check {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border: 1.5px solid var(--border);
+  border-radius: 5px;
+  color: #fff;
+  font-size: 0.78rem;
+}
+.asset-row-check i { opacity: 0; }
+.asset-row.selected .asset-row-check {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+.asset-row.selected .asset-row-check i { opacity: 1; }
+.asset-row-sym {
+  flex-shrink: 0;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--text);
+}
+.asset-row-name {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+
+/* --- Run action -------------------------------------------- */
+.sharpe-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+.btn-run {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 22px;
+  background: var(--green);
+  color: #fff;
+  border: none;
+  border-radius: 7px;
+  font-family: inherit;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background .15s, transform .05s;
+}
+.btn-run:hover { background: #16a34a; }
+.btn-run:active { transform: translateY(1px); }
+.btn-run i { font-size: 1.1rem; }
+
+/* --- Loading state ----------------------------------------- */
+.sharpe-loading {
+  text-align: center;
+  padding: 40px 20px;
+}
+.sharpe-loading .loader-text { margin-top: 18px; }
+
+/* --- Result: chart + data panel ---------------------------- */
+.sharpe-result {
+  display: grid;
+  grid-template-columns: 1fr 280px;
+  gap: 20px;
+  align-items: start;
+}
+.sharpe-canvas-card {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, .06);
+  padding: 16px;
+}
+.sharpe-canvas-card canvas {
+  width: 100% !important;
+  height: auto !important;
+}
+.sharpe-data-card {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, .06);
+  padding: 16px 18px;
+  font-size: 0.84rem;
+}
+.sharpe-data-card h4 {
+  margin: 0 0 8px;
+  font-size: 0.74rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+.sharpe-data-card h4.mt-block { margin-top: 16px; }
+.sharpe-data-card .muted { color: var(--text-muted); }
+
+#sharpe-main-values div,
+#sharpe-weights div {
+  padding: 3px 0;
+  border-bottom: 1px dashed var(--border);
+  color: var(--text);
+}
+#sharpe-main-values div:last-child,
+#sharpe-weights div:last-child { border-bottom: none; }
+
+/* --- Idle / error state ------------------------------------ */
+.sharpe-idle {
+  padding: 44px 20px;
+  text-align: center;
+  color: var(--text-muted);
+  background: var(--card-bg);
+  border: 1px dashed var(--border);
+  border-radius: 10px;
+}
+.sharpe-idle-main {
+  font-size: 0.98rem;
+  font-weight: 500;
+  color: var(--text);
+  margin-bottom: 4px;
+}
+.sharpe-idle-detail {
+  font-size: 0.84rem;
+  color: var(--red);
+}
+
+/* --- Responsive -------------------------------------------- */
+@media (max-width: 860px) {
+  .sharpe-result { grid-template-columns: 1fr; }
+}
+@media (max-width: 768px) {
+  .navbar-left { gap: 10px; }
+  .nav-tab span { display: none; }
+  .nav-tab { padding: 6px 10px; }
+  .field-row { grid-template-columns: 1fr; }
+  .custom-add-row { flex-direction: column; align-items: stretch; }
+  .custom-add-row .sharpe-input { max-width: 100%; }
+  .sharpe-actions { justify-content: stretch; }
+  .btn-run { width: 100%; justify-content: center; }
+}
