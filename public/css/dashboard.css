@@ -720,8 +720,16 @@ main.container-lg {
   background: #f8fafc;
 }
 
+/* The detail cell spans every column, so it is as wide as the whole
+   horizontally scrollable table — not as wide as what the user can see.
+   Pin the panel to the left edge of the scroll viewport and size it to the
+   visible width (--detail-w, published by financial-detail.js) so the chart
+   and the analyst card never render off-screen. */
 .detail-panel {
   padding: 20px 24px 24px;
+  position: sticky;
+  left: 0;
+  width: var(--detail-w, 100%);
 }
 
 .detail-header {

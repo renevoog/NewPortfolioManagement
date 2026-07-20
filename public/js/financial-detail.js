@@ -507,6 +507,29 @@
     }
   }
 
+  // ---- Keep detail panels sized to the visible scroll viewport ----
+  // The detail <td colspan="24"> is as wide as the full table, so publish the
+  // scroll container's client width as --detail-w for .detail-panel to use.
+  // Chart.js (responsive) picks the new size up on its own.
+  var tableWrap = document.querySelector('.table-wrap');
+  var lastWrapWidth = -1;
+
+  function syncDetailWidth() {
+    var w = tableWrap.clientWidth;
+    if (w === lastWrapWidth) return;
+    lastWrapWidth = w;
+    tableWrap.style.setProperty('--detail-w', w + 'px');
+  }
+
+  if (tableWrap) {
+    syncDetailWidth();
+    if (window.ResizeObserver) {
+      new ResizeObserver(syncDetailWidth).observe(tableWrap);
+    } else {
+      window.addEventListener('resize', syncDetailWidth);
+    }
+  }
+
   // ---- Event delegation on tbody for expand buttons ----------
   var tbody = document.getElementById('stock-tbody');
   if (tbody) {
