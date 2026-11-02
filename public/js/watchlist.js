@@ -54,7 +54,7 @@
     if (!filtered.length) {
       var emptyRow = document.createElement('tr');
       var empty = cell(emptyRow, '', 'no-data');
-      empty.colSpan = 5;
+      empty.colSpan = 8;
       empty.textContent = !loaded ? (loading ? 'Loading your watchlist...' : 'Use Refresh to load your watchlist.')
         : rows.length ? 'No matching favourites.' : 'Your watchlist is empty. Add a symbol above or star one on the Dashboard.';
       tbody.appendChild(emptyRow);
@@ -91,6 +91,9 @@
       if (row.comparisonTime) {
         changeCell.title = percentCell.title = 'Compared with price at ' + new Date(row.comparisonTime).toLocaleString();
       }
+      cell(tr, row.change7d, 'col-num ' + changeClass(row.change7dPct));
+      cell(tr, row.change1mo, 'col-num ' + changeClass(row.change1moPct));
+      cell(tr, row.change6mo, 'col-num ' + changeClass(row.change6moPct));
       tbody.appendChild(tr);
     });
     document.getElementById('watchlist-count').textContent = (query ? filtered.length + ' of ' : '')

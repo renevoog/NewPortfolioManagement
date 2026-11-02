@@ -401,14 +401,14 @@ main.container-lg {
 .btn-favourite.is-favourite { color: #b7790b; }
 .btn-favourite:focus-visible, .watchlist-sort:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
 .btn-favourite:disabled, .watchlist-page button:disabled { opacity: .5; cursor: wait; }
-.watchlist-page { max-width: 920px; margin: 0 auto; }
+.watchlist-page { max-width: 1160px; margin: 0 auto; }
 .watchlist-heading { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
 .watchlist-heading h1 i { color: #b7790b; margin-right: 5px; }
 .watchlist-period { background: #e8eef7; color: var(--navy-light); border-radius: 20px; padding: 5px 12px; font-size: .78rem; white-space: nowrap; }
 .watchlist-page .search-box { flex-basis: 180px; }
 .watchlist-page .add-form input { width: 250px; }
 .watchlist-message { min-height: 1.2em; font-size: .85rem; color: var(--text-muted); margin: 0 0 10px; }
-.watchlist-table { font-variant-numeric: tabular-nums; }
+.watchlist-table { font-variant-numeric: tabular-nums; min-width: 820px; }
 .watchlist-table td { padding-top: 12px; padding-bottom: 12px; }
 .watchlist-table th:first-child, .watchlist-table td:first-child { width: 42px; padding-right: 0; }
 .watchlist-company { display: block; font-size: .76rem; font-weight: 400; color: var(--text-muted); max-width: 270px; overflow: hidden; text-overflow: ellipsis; }
@@ -427,15 +427,7 @@ main.container-lg {
   .watchlist-period { font-size: .7rem; }
 }
 @media (max-width: 520px) {
-  .watchlist-table { table-layout: fixed; }
-  .watchlist-table th:first-child, .watchlist-table td:first-child { width: 8%; padding-left: 5px; padding-right: 0; }
-  .watchlist-table th:nth-child(2) { width: 26%; }
-  .watchlist-table th:nth-child(n+3) { width: 22%; }
-  .watchlist-page .watchlist-table td { padding-left: 5px; padding-right: 5px; font-size: .76rem; }
-  .watchlist-page .watchlist-table th { padding-left: 5px; padding-right: 5px; font-size: .62rem; }
   .watchlist-sort i { display: none; }
-  .watchlist-company { max-width: 100%; font-size: .67rem; }
-  .watchlist-table .btn-favourite { margin: 0; }
 }
 
 /* Symbol link */

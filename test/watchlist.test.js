@@ -16,7 +16,8 @@ function load(relative, mocks = {}) {
   return mod.exports;
 }
 
-const { calculate24h } = require('../server/services/yahoo/watchlistQuoteService');
+const { calculatePriceChanges } = require('../server/services/yahoo/watchlistQuoteService');
+const { extractPoints } = require('../server/services/yahoo/yahooHistoryService');
 const NOW = Date.parse('2026-11-01T12:00:00Z');
 const SEC = NOW / 1000;
 const DAY = 86400;
@@ -24,39 +25,84 @@ function history(points, meta = {}) {
   return { meta, timestamp: points.map(([t]) => t), indicators: { quote: [{ close: points.map(([, c]) => c) }] } };
 }
 
-test('24h compares with wall-clock history, not regularMarketPreviousClose', () => {
-  const values = calculate24h(history([[SEC - DAY - 300, 100], [SEC - 300, 110]], {
+test('24h compares historical prices relative to the latest quote', () => {
+  const values = calculatePriceChanges(history([[SEC - DAY - 300, 100], [SEC - 300, 110]], {
     regularMarketPrice: 112, regularMarketTime: SEC, regularMarketPreviousClose: 111
-  }), NOW);
+  }), null, NOW);
   assert.equal(values.price, 112);
   assert.equal(values.change24h, 12);
   assert.equal(values.change24hPct, 12);
   assert.equal(values.comparisonTime, new Date((SEC - DAY - 300) * 1000).toISOString());
 });
 
-test('closed market uses the same last trade at both ends of the rolling window', () => {
-  const values = calculate24h(history([[SEC - 3 * DAY, 95], [SEC - 2 * DAY, 100]], {
+test('closed market retains its last price change through weekends and before Monday opening', () => {
+  const result = history([[SEC - 3 * DAY, 95], [SEC - 2 * DAY, 100]], {
     regularMarketTime: SEC - 2 * DAY + 60, regularMarketPrice: 101
-  }), NOW);
+  });
+  const values = calculatePriceChanges(result, null, NOW);
   assert.equal(values.price, 101);
-  assert.equal(values.change24h, 0);
-  assert.equal(values.change24hPct, 0);
+  assert.equal(values.change24h, 6);
+  assert.equal(values.change24hPct, 6 / 95 * 100);
+  assert.deepEqual(calculatePriceChanges(result, null, NOW + DAY), values);
 });
 
 test('24h handles losses and never borrows a sample after the cutoff', () => {
-  const values = calculate24h(history([[SEC - DAY - 300, 200], [SEC - DAY + 60, 190], [SEC - 60, 180]]), NOW);
+  const values = calculatePriceChanges(history([[SEC - DAY - 300, 200], [SEC - DAY + 60, 190], [SEC - 60, 180]]), null, NOW);
   assert.equal(values.change24h, -20);
   assert.equal(values.change24hPct, -10);
 });
 
 test('missing baseline or invalid history remains unavailable, not a zero change', () => {
-  const recent = calculate24h(history([[SEC - DAY - 60, null], [SEC - 60, 50], [SEC + 60, 100]]), NOW);
+  const recent = calculatePriceChanges(history([[SEC - DAY - 60, null], [SEC - 60, 50], [SEC + 60, 100]]), null, NOW);
   assert.equal(recent.price, 50);
   assert.equal(recent.change24h, null);
   assert.equal(recent.change24hPct, null);
-  const empty = calculate24h(history([[SEC - DAY, 0], [SEC - 60, NaN]]), NOW);
+  const empty = calculatePriceChanges(history([[SEC - DAY, 0], [SEC - 60, NaN]]), null, NOW);
   assert.equal(empty.price, null);
   assert.equal(empty.change24h, null);
+});
+
+test('1W, 1M and 6M use the same latest price and daily history before each cutoff', () => {
+  const latest = SEC - 2 * DAY;
+  const intraday = history([[latest - DAY, 110], [latest, 120]]);
+  const daily = history([
+    [latest - 183 * DAY, 60], [latest - 182 * DAY + 60, 70],
+    [latest - 30 * DAY, 150], [latest - 7 * DAY, 100], [latest - DAY, 110]
+  ]);
+  const values = calculatePriceChanges(intraday, daily, NOW);
+  assert.equal(values.change7dPct, 20);
+  assert.equal(values.change1moPct, -20);
+  assert.equal(values.change6moPct, 100);
+  assert.deepEqual(calculatePriceChanges(intraday, daily, NOW + DAY), values);
+});
+
+test('watchlist uses price closes rather than dividend-adjusted returns', () => {
+  const daily = history([[SEC - 200 * DAY, 90], [SEC - 7 * DAY, 100], [SEC, 100]]);
+  daily.indicators.adjclose = [{ adjclose: [80, 95, 100] }];
+  const values = calculatePriceChanges(null, daily, NOW);
+  assert.equal(values.change7dPct, 0);
+  assert.equal(extractPoints(daily)[1].c, 95); // Other existing consumers retain their default.
+  assert.equal(extractPoints(daily, { adjusted: false })[1].c, 100);
+});
+
+test('daily history recovers prices and all periods when intraday data is unavailable', () => {
+  const daily = history([
+    [SEC - 190 * DAY, 50], [SEC - 35 * DAY, 75], [SEC - 8 * DAY, 100],
+    [SEC - 3 * DAY, 110], [SEC - 2 * DAY, 120]
+  ]);
+  const values = calculatePriceChanges(null, daily, NOW);
+  assert.equal(values.price, 120);
+  assert.equal(values.change24h, 10);
+  assert.equal(values.change7dPct, 60);
+  assert.equal(values.change1moPct, 60);
+  assert.equal(values.change6moPct, 140);
+});
+
+test('new listings expose available periods without inventing longer history', () => {
+  const values = calculatePriceChanges(null, history([[SEC - 8 * DAY, 100], [SEC, 120]]), NOW);
+  assert.equal(values.change7dPct, 20);
+  assert.equal(values.change1moPct, null);
+  assert.equal(values.change6moPct, null);
 });
 
 test('watchlist quote fetch reuses mappings/cache and isolates unavailable symbols', async () => {
@@ -66,6 +112,9 @@ test('watchlist quote fetch reuses mappings/cache and isolates unavailable symbo
       calls.push(args);
       if (args[0] === 'MISSING') throw new Error('Provider unavailable');
       const now = Math.floor(Date.now() / 1000);
+      if (args[2] === '1d') return history([
+        [now - 190 * DAY, 0.3], [now - 31 * DAY, 0.4], [now - 8 * DAY, 0.5], [now - 120, 0.6]
+      ], { currency: 'EUR' });
       return history([[now - DAY - 300, 0.5], [now - 60, 0.6]], { shortName: 'Mapped asset', currency: 'EUR' });
     } }
   });
@@ -74,12 +123,32 @@ test('watchlist quote fetch reuses mappings/cache and isolates unavailable symbo
   assert.equal(rows[0].symbol, 'LOCAL');
   assert.equal(rows[0].lastPrice, '0.60 €');
   assert.equal(rows[0].changePct, '+20.00%');
+  assert.equal(rows[0].change7d, '+20.00%');
+  assert.equal(rows[0].change1mo, '+50.00%');
+  assert.equal(rows[0].change6mo, '+100.00%');
   assert.equal(rows[1].price, null);
   assert.equal(rows[1].changePct, '-');
+  assert.equal(rows[1].change7d, '-');
+  assert.equal(rows[1].change1mo, '-');
+  assert.equal(rows[1].change6mo, '-');
   await quotes.getWatchlistRows([assets[0]]);
-  assert.equal(calls.filter(([symbol]) => symbol === 'MAPPED.PA').length, 1);
+  assert.equal(calls.filter(([symbol]) => symbol === 'MAPPED.PA').length, 2);
   assert.deepEqual(calls[0].slice(0, 3), ['MAPPED.PA', '5d', '5m']);
+  assert.deepEqual(calls[1].slice(0, 3), ['MAPPED.PA', '1y', '1d']);
   assert.ok(calls[0][3].signal instanceof AbortSignal);
+});
+
+test('intraday provider failure does not discard available daily history', async () => {
+  const quotes = load('server/services/yahoo/watchlistQuoteService.js', {
+    './yahooFinanceClient': { chart: async (symbol, range, interval) => {
+      if (interval === '5m') throw new Error('Intraday unavailable');
+      return history([[SEC - 190 * DAY, 50], [SEC - 3 * DAY, 100], [SEC - 2 * DAY, 110]], { currency: 'USD' });
+    } }
+  });
+  const [row] = await quotes.getWatchlistRows([{ tvSymbol: 'AAPL', yahooSymbol: 'AAPL' }]);
+  assert.equal(row.price, 110);
+  assert.equal(row.changePct, '+10.00%');
+  assert.equal(row.change6mo, '+120.00%');
 });
 
 test('resolving a watchlist-only symbol does not change the initial dashboard list', async () => {

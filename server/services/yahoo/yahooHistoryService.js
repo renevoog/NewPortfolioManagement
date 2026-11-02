@@ -30,13 +30,14 @@ const emptyChanges = () => ({
 
 // Build a sorted (ascending) array of { t, c } points from a chart result.
 // Prefers adjusted close (handles splits & dividends) and skips null entries.
-const extractPoints = (result) => {
+// Price-only comparisons can explicitly request the unadjusted closes.
+const extractPoints = (result, { adjusted = true } = {}) => {
   if (!result || !Array.isArray(result.timestamp)) return [];
 
   const ts = result.timestamp;
   const quote = result.indicators && result.indicators.quote && result.indicators.quote[0];
   const adj = result.indicators && result.indicators.adjclose && result.indicators.adjclose[0];
-  const closes = (adj && Array.isArray(adj.adjclose)) ? adj.adjclose
+  const closes = (adjusted && adj && Array.isArray(adj.adjclose)) ? adj.adjclose
     : (quote && Array.isArray(quote.close)) ? quote.close
       : [];
 

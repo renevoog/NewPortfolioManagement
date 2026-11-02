@@ -6,7 +6,7 @@
       <h1 id="watchlist-title"><i class="bi bi-star" aria-hidden="true"></i> Watchlist</h1>
       <p>Your favourites, at a glance.</p>
     </div>
-    <span class="watchlist-period">24-hour changes</span>
+    <span class="watchlist-period">Price changes</span>
   </div>
 
   <div class="toolbar">
@@ -27,8 +27,8 @@
   <p id="watchlist-message" class="watchlist-message" role="status"></p>
 
   <div class="table-card" id="watchlist-card" aria-busy="true">
-    <div class="table-wrap">
-      <table class="stock-table watchlist-table" aria-label="Favourite instruments and 24-hour price changes">
+    <div class="table-wrap" tabindex="0" role="region" aria-label="Watchlist prices; scroll horizontally for all periods">
+      <table class="stock-table watchlist-table" aria-label="Favourite instruments and price changes">
         <thead>
           <tr>
             <th scope="col" aria-label="Favourite"></th>
@@ -36,9 +36,12 @@
             <th scope="col" class="col-num" aria-sort="none"><button type="button" class="watchlist-sort" data-sort="price">Last <i class="bi bi-arrow-down-up" aria-hidden="true"></i></button></th>
             <th scope="col" class="col-num" aria-sort="none"><button type="button" class="watchlist-sort" data-sort="change24h">Chg (24h) <i class="bi bi-arrow-down-up" aria-hidden="true"></i></button></th>
             <th scope="col" class="col-num" aria-sort="none"><button type="button" class="watchlist-sort" data-sort="change24hPct">Chg% (24h) <i class="bi bi-arrow-down-up" aria-hidden="true"></i></button></th>
+            <th scope="col" class="col-num" aria-sort="none"><button type="button" class="watchlist-sort" data-sort="change7dPct" title="Price change over 7 days">1W <i class="bi bi-arrow-down-up" aria-hidden="true"></i></button></th>
+            <th scope="col" class="col-num" aria-sort="none"><button type="button" class="watchlist-sort" data-sort="change1moPct" title="Price change over 30 days">1M <i class="bi bi-arrow-down-up" aria-hidden="true"></i></button></th>
+            <th scope="col" class="col-num" aria-sort="none"><button type="button" class="watchlist-sort" data-sort="change6moPct" title="Price change over 182 days">6M <i class="bi bi-arrow-down-up" aria-hidden="true"></i></button></th>
           </tr>
         </thead>
-        <tbody id="watchlist-tbody"><tr><td colspan="5" class="no-data">Loading your watchlist...</td></tr></tbody>
+        <tbody id="watchlist-tbody"><tr><td colspan="8" class="no-data">Loading your watchlist...</td></tr></tbody>
       </table>
     </div>
     <div class="status-bar">
@@ -47,7 +50,7 @@
     </div>
   </div>
 
-  <p class="watchlist-note">Compared with 24 hours ago using five-minute price samples. When markets are closed, the last available price is used. Unavailable data is shown as &ldquo;&mdash;&rdquo;.</p>
+  <p class="watchlist-note">Price changes are measured back from the latest available price: 24h, 1W (7 days), 1M (30 days) and 6M (182 days). The last change stays visible when markets are closed. Missing history is shown as &ldquo;&mdash;&rdquo;.</p>
   <p class="watchlist-note">Add symbols here or use <i class="bi bi-star" aria-hidden="true"></i> <strong>Add to favourites</strong> on the <a href="/home">Dashboard</a>.</p>
 </section>
 
