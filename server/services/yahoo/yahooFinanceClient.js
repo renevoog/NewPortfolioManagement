@@ -7,12 +7,13 @@ let _crumb = null;
 let _cookie = null;
 
 // Get a crumb+cookie pair from Yahoo
-const initCrumb = async () => {
+const initCrumb = async (signal) => {
   if (_crumb && _cookie) return;
 
   try {
     // Step 1: Get consent cookie
     const consentRes = await fetch('https://fc.yahoo.com', {
+      signal,
       headers: { 'User-Agent': UA },
       redirect: 'manual'
     });
@@ -21,6 +22,7 @@ const initCrumb = async () => {
 
     // Step 2: Get crumb
     const crumbRes = await fetch('https://query2.finance.yahoo.com/v1/test/getcrumb', {
+      signal,
       headers: {
         'User-Agent': UA,
         'Cookie': cookieStr
@@ -126,14 +128,15 @@ const insights = async (symbol) => {
 // Historical price chart for a single symbol.
 // range: 1d,5d,1mo,3mo,6mo,1y,2y,5y,10y,ytd,max — interval: 1d, 1wk, 1mo, ...
 // Returns the raw chart result object: { meta, timestamp:[], indicators:{ quote:[{close}], adjclose:[{adjclose}] } }
-const chart = async (symbol, range, interval) => {
-  await initCrumb();
+const chart = async (symbol, range, interval, options = {}) => {
+  await initCrumb(options.signal);
 
   const r = range || '2y';
   const iv = interval || '1d';
   const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?range=${r}&interval=${iv}&crumb=${encodeURIComponent(_crumb || '')}`;
 
   const res = await fetch(url, {
+    signal: options.signal,
     headers: {
       'User-Agent': UA,
       'Cookie': _cookie || ''

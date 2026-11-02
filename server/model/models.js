@@ -61,3 +61,13 @@ const trackedAssetSchema = new mongoose.Schema({
 trackedAssetSchema.index({ userId: 1, tvSymbol: 1 }, { unique: true });
 
 exports.trackedAssetModel = mongoose.model('trackedAsset', trackedAssetSchema);
+
+// Favourites are independent of the dashboard's tracked assets.
+const watchlistAssetSchema = new mongoose.Schema({
+  userId: { type: String, required: true },
+  tvSymbol: { type: String, required: true },
+  yahooSymbol: { type: String, required: true },
+  addedAt: { type: Date, default: Date.now }
+});
+watchlistAssetSchema.index({ userId: 1, tvSymbol: 1 }, { unique: true });
+exports.watchlistAssetModel = mongoose.model('watchlistAsset', watchlistAssetSchema);

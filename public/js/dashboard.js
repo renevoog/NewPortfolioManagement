@@ -17,6 +17,46 @@
   var refreshTimeEl = document.getElementById('refresh-time');
 
   var currentSort = { col: null, dir: null };
+  var pendingFavourites = new Set();
+
+  function favouriteButton(row) {
+    var label = (row.isFavourite ? 'Remove from favourites: ' : 'Add to favourites: ') + row.symbol;
+    return '<button type="button" class="btn-favourite' + (row.isFavourite ? ' is-favourite' : '')
+      + '" data-symbol="' + esc(row.symbol) + '" title="' + esc(label) + '" aria-label="' + esc(label)
+      + '" aria-pressed="' + !!row.isFavourite + '"' + (pendingFavourites.has(row.symbol) ? ' disabled' : '')
+      + '><i class="bi bi-star' + (row.isFavourite ? '-fill' : '') + '" aria-hidden="true"></i></button>';
+  }
+
+  tbody.addEventListener('click', async function (event) {
+    var button = event.target.closest('.btn-favourite');
+    if (!button) return;
+    var symbol = button.dataset.symbol;
+    var row = rows.find(function (item) { return item.symbol === symbol; });
+    if (!row || pendingFavourites.has(symbol)) return;
+    var adding = !row.isFavourite;
+    pendingFavourites.add(symbol);
+    button.disabled = true;
+    try {
+      if (adding) await window.WatchlistAPI.add(symbol);
+      else await window.WatchlistAPI.remove(symbol);
+      rows.forEach(function (item) { if (item.symbol === symbol) item.isFavourite = adding; });
+    } catch (err) {
+      showError(err.message);
+    } finally {
+      pendingFavourites.delete(symbol);
+      var current = rows.find(function (item) { return item.symbol === symbol; });
+      tbody.querySelectorAll('.btn-favourite').forEach(function (el) {
+        if (el.dataset.symbol !== symbol || !current) return;
+        var label = (current.isFavourite ? 'Remove from favourites: ' : 'Add to favourites: ') + symbol;
+        el.disabled = false;
+        el.classList.toggle('is-favourite', !!current.isFavourite);
+        el.setAttribute('aria-pressed', String(!!current.isFavourite));
+        el.setAttribute('aria-label', label);
+        el.title = label;
+        el.innerHTML = '<i class="bi bi-star' + (current.isFavourite ? '-fill' : '') + '" aria-hidden="true"></i>';
+      });
+    }
+  });
 
   // Track which rows are expanded (survives rerender)
   var expandedSymbols = {};
@@ -157,7 +197,7 @@
       tbody.innerHTML = '<tr><td colspan="24" class="no-data">'
         + '<div class="empty-watchlist">'
         + '<i class="bi bi-plus-circle" style="font-size:1.6rem;opacity:0.4;"></i>'
-        + '<p>Your watchlist is empty</p>'
+        + '<p>Your dashboard is empty</p>'
         + '<p class="empty-watchlist-hint">Add your first symbol using the input above.</p>'
         + '</div>'
         + '</td></tr>';
@@ -182,7 +222,7 @@
 
       html += '<tr class="asset-row" data-symbol="' + safeSymbol + '">'
         + '<td class="col-expand"><button class="btn-expand' + expandedClass + '" data-symbol="' + safeSymbol + '" title="Show financial details"><i class="bi bi-chevron-right"></i></button></td>'
-        + '<td class="col-sym"><a class="sym-link" href="' + tvUrl(r.symbol) + '" target="_blank" rel="noopener">' + safeSymbol + '</a></td>'
+        + '<td class="col-sym">' + favouriteButton(r) + '<a class="sym-link" href="' + tvUrl(r.symbol) + '" target="_blank" rel="noopener">' + safeSymbol + '</a></td>'
         + '<td data-col-key="company">' + esc(r.companyName) + '</td>'
         + '<td class="col-num" data-col-key="marketCap">' + esc(r.marketCap) + '</td>'
         + '<td class="col-num" data-col-key="price">' + esc(r.lastPrice) + '</td>'

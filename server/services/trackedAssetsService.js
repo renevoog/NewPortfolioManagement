@@ -74,15 +74,17 @@ const addSymbol = async (userId, tvSymbol) => {
     return { success: false, error: `Symbol already tracked: ${sym}` };
   }
 
-  // Check if it's in our known mapping
-  if (hasSymbol(sym)) {
-    await trackedAssetModel.create({
-      tvSymbol: sym,
-      yahooSymbol: getYahooSymbol(sym),
-      userId: userId
-    });
-    return { success: true };
-  }
+  const yahooSym = await resolveSymbol(sym);
+  if (!yahooSym) return { success: false, error: `Symbol not found: ${sym}` };
+
+  addMapping(sym, yahooSym);
+  await trackedAssetModel.create({ tvSymbol: sym, yahooSymbol: yahooSym, userId });
+  return { success: true };
+};
+
+// Resolve symbols consistently for the dashboard and the separate favourites list.
+const resolveSymbol = async (sym) => {
+  if (hasSymbol(sym)) return getYahooSymbol(sym);
 
   // Unknown symbol - try Yahoo first, then eToro as fallback
   let yahooSym = null;
@@ -98,32 +100,20 @@ const addSymbol = async (userId, tvSymbol) => {
   }
 
   if (yahooSym) {
-    addMapping(sym, yahooSym);
-    await trackedAssetModel.create({
-      tvSymbol: sym,
-      yahooSymbol: yahooSym,
-      userId: userId
-    });
-    return { success: true };
+    return yahooSym;
   }
 
   // Yahoo didn't find it — try eToro as fallback
   try {
     const etoroFound = await etoroValidate(sym);
     if (etoroFound) {
-      addMapping(sym, sym);
-      await trackedAssetModel.create({
-        tvSymbol: sym,
-        yahooSymbol: sym,
-        userId: userId
-      });
-      return { success: true };
+      return sym;
     }
   } catch (err) {
     // eToro also failed
   }
 
-  return { success: false, error: `Symbol not found: ${sym}` };
+  return null;
 };
 
 // Remove a symbol for a user
@@ -201,6 +191,7 @@ exports.getTrackedSymbolMap = getTrackedSymbolMap;
 exports.getTrackedAssets = getTrackedAssets;
 exports.initializeTrackedAssets = initializeTrackedAssets;
 exports.addSymbol = addSymbol;
+exports.resolveSymbol = resolveSymbol;
 exports.removeSymbol = removeSymbol;
 exports.shareWatchlist = shareWatchlist;
 exports.isAdmin = isAdmin;

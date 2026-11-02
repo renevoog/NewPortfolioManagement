@@ -1,0 +1,56 @@
+<%- include('partials/header') %>
+
+<section class="watchlist-page" aria-labelledby="watchlist-title">
+  <div class="watchlist-heading">
+    <div class="page-head">
+      <h1 id="watchlist-title"><i class="bi bi-star" aria-hidden="true"></i> Watchlist</h1>
+      <p>Your favourites, at a glance.</p>
+    </div>
+    <span class="watchlist-period">24-hour changes</span>
+  </div>
+
+  <div class="toolbar">
+    <div class="search-box">
+      <i class="bi bi-search" aria-hidden="true"></i>
+      <input type="search" id="watchlist-search" aria-label="Filter watchlist" placeholder="Filter symbol or name..." />
+    </div>
+    <form class="add-form" id="watchlist-add-form">
+      <input type="text" id="watchlist-symbol" aria-label="Symbol to add to watchlist" placeholder="Symbol, e.g. AAPL or BTC-USD" maxlength="50" autocomplete="off" required />
+      <button type="submit" class="btn-add"><i class="bi bi-plus-lg" aria-hidden="true"></i> Add</button>
+    </form>
+    <button type="button" class="btn-coltoggle" id="watchlist-refresh" aria-label="Refresh watchlist" title="Refresh prices">
+      <i class="bi bi-arrow-clockwise" aria-hidden="true"></i>
+    </button>
+  </div>
+
+  <p id="watchlist-error" class="error-msg" role="alert" hidden></p>
+  <p id="watchlist-message" class="watchlist-message" role="status"></p>
+
+  <div class="table-card" id="watchlist-card" aria-busy="true">
+    <div class="table-wrap">
+      <table class="stock-table watchlist-table" aria-label="Favourite instruments and 24-hour price changes">
+        <thead>
+          <tr>
+            <th scope="col" aria-label="Favourite"></th>
+            <th scope="col" aria-sort="none"><button type="button" class="watchlist-sort" data-sort="symbol">Symbol <i class="bi bi-arrow-down-up" aria-hidden="true"></i></button></th>
+            <th scope="col" class="col-num" aria-sort="none"><button type="button" class="watchlist-sort" data-sort="price">Last <i class="bi bi-arrow-down-up" aria-hidden="true"></i></button></th>
+            <th scope="col" class="col-num" aria-sort="none"><button type="button" class="watchlist-sort" data-sort="change24h">Chg (24h) <i class="bi bi-arrow-down-up" aria-hidden="true"></i></button></th>
+            <th scope="col" class="col-num" aria-sort="none"><button type="button" class="watchlist-sort" data-sort="change24hPct">Chg% (24h) <i class="bi bi-arrow-down-up" aria-hidden="true"></i></button></th>
+          </tr>
+        </thead>
+        <tbody id="watchlist-tbody"><tr><td colspan="5" class="no-data">Loading your watchlist...</td></tr></tbody>
+      </table>
+    </div>
+    <div class="status-bar">
+      <span id="watchlist-count">Loading...</span>
+      <span id="watchlist-updated">Refreshes every minute</span>
+    </div>
+  </div>
+
+  <p class="watchlist-note">Compared with 24 hours ago using five-minute price samples. When markets are closed, the last available price is used. Unavailable data is shown as &ldquo;&mdash;&rdquo;.</p>
+  <p class="watchlist-note">Add symbols here or use <i class="bi bi-star" aria-hidden="true"></i> <strong>Add to favourites</strong> on the <a href="/home">Dashboard</a>.</p>
+</section>
+
+<script src="/js/watchlist-api.js"></script>
+<script src="/js/watchlist.js"></script>
+<%- include('partials/footer') %>

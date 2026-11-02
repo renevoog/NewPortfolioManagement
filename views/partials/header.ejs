@@ -25,6 +25,11 @@
                 </a>
               </li>
               <li>
+                <a href="/watchlist" aria-label="Watchlist" class="nav-tab <%= activeTabName === 'watchlist' ? 'active' : '' %>" <%- activeTabName === 'watchlist' ? 'aria-current="page"' : '' %>>
+                  <i class="bi bi-star"></i><span>Watchlist</span>
+                </a>
+              </li>
+              <li>
                 <a href="/sharpe" class="nav-tab <%= activeTabName === 'sharpe' ? 'active' : '' %>">
                   <i class="bi bi-pie-chart-fill"></i><span>Sharpe Ratio</span>
                 </a>

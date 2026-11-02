@@ -6,6 +6,7 @@ const { getStockRows } = require('../services/stockAggregator');
 const { getTrackedSymbols, getTrackedSymbolMap, initializeTrackedAssets, addSymbol, removeSymbol, shareWatchlist, isAdmin } = require('../services/trackedAssetsService');
 const { getFinancialHistory } = require('../services/yahoo/yahooFinancialService');
 const { getColumnPreferences, saveColumnPreferences } = require('../services/userPreferencesService');
+const { getAssets: getWatchlistAssets } = require('../services/watchlistService');
 const { getYahooSymbol } = require('../services/symbolMap');
 const { batchQuotes } = require('../services/yahoo/yahooStockService');
 const { fetchSharpeHistory } = require('../services/sharpe/sharpeHistoryService');
@@ -199,13 +200,19 @@ exports.new_dashboardDataController_GET = async(req, res, next) => {
     const trackedSymbols = await getTrackedSymbols(userId);
     const dbSymbolMap = await getTrackedSymbolMap(userId);
 
+    // Read membership even on cache hits, so changes from another tab are visible.
+    const favourites = new Set((await getWatchlistAssets(userId)).map((asset) => asset.tvSymbol));
+    const withFavourites = (rows) => rows.map((row) => ({
+      ...row, isFavourite: favourites.has(row.symbol.toUpperCase())
+    }));
+
     // Check session cache
     const sessionCache = req.session.dashboardCache;
     const now = Date.now();
     if (sessionCache && sessionCache.ts && (now - sessionCache.ts) < DASHBOARD_CACHE_TTL) {
       const cachedSymbols = sessionCache.symbols || [];
       if (JSON.stringify(cachedSymbols) === JSON.stringify(trackedSymbols)) {
-        return res.json({ rows: sessionCache.rows, refreshTime: sessionCache.refreshTime, cached: true });
+        return res.json({ rows: withFavourites(sessionCache.rows), refreshTime: sessionCache.refreshTime, cached: true });
       }
     }
 
@@ -222,7 +229,7 @@ exports.new_dashboardDataController_GET = async(req, res, next) => {
       ts: now
     };
 
-    res.json({ rows: rows, refreshTime: refreshTime });
+    res.json({ rows: withFavourites(rows), refreshTime: refreshTime });
   } catch (err) {
     console.log('Dashboard data error:', err.message);
     res.json({ rows: [], error: 'Failed to load dashboard data.', refreshTime: null });
