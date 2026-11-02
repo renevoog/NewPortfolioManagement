@@ -5,7 +5,9 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "test": "node --test"
+    "test": "node --test",
+    "risk:check": "node scripts/check-risk-data.js",
+    "risk:refresh": "node scripts/check-risk-data.js --refresh"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",

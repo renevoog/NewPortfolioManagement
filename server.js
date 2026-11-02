@@ -24,7 +24,9 @@ if (isProduction) {
 }
 
 //Connection to the database
-connectionToTheDatabase();
+connectionToTheDatabase().then((connection) => {
+  if (connection) require('./server/services/risk/riskService').start();
+});
 
 //make the server to use body-parser
 app.use(bodyParser.urlencoded({ extended: true }));

@@ -4,6 +4,7 @@ app = "newportfoliomanagementtool"
 [env]
   NODE_ENV = "production"
   PORT = "8080"
+  RISK_DATA_USAGE = "personal-noncommercial"
 
 [http_service]
   internal_port = 8080

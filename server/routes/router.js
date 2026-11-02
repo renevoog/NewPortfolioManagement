@@ -3,6 +3,7 @@ const app = express();
 const router = express.Router();
 const controller = require('../controller/controller');
 const watchlistController = require('../controller/watchlistController');
+const riskController = require('../controller/riskController');
 const { ensureAuthenticated } = require('../../config/auth');
 
 router.get('/', controller.new_loginController_GET);
@@ -29,6 +30,9 @@ router.get('/debug/stocks', ensureAuthenticated, controller.new_debugStocksContr
 
 router.get('/sharpe', ensureAuthenticated, controller.new_sharpeViewController_GET);
 router.get('/api/sharpe-data', ensureAuthenticated, controller.new_sharpeGraphController_GET);
+
+router.get('/risk', ensureAuthenticated, riskController.view);
+router.get('/api/risk-data', ensureAuthenticated, riskController.data);
 
 router.get('/health/db', controller.new_dbHealthController_GET);
 

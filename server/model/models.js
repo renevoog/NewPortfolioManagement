@@ -71,3 +71,40 @@ const watchlistAssetSchema = new mongoose.Schema({
 });
 watchlistAssetSchema.index({ userId: 1, tvSymbol: 1 }, { unique: true });
 exports.watchlistAssetModel = mongoose.model('watchlistAsset', watchlistAssetSchema);
+
+// Shared public market data, independent of users' holdings and watchlists.
+// Content-addressed compressed datasets retain the inputs for reproducible runs.
+const riskDatasetSchema = new mongoose.Schema({
+  key: { type: String, required: true },
+  version: { type: String, required: true },
+  payload: { type: Buffer, required: true },
+  createdAt: { type: Date, default: Date.now },
+  dataThrough: String
+});
+riskDatasetSchema.index({ key: 1, version: 1 }, { unique: true });
+exports.riskDatasetModel = mongoose.model('riskDataset', riskDatasetSchema);
+
+const riskSourceSchema = new mongoose.Schema({
+  _id: String,
+  version: String,
+  fetchedAt: Date,
+  dataThrough: String,
+  lastFullAt: Date,
+  nextAttemptAt: Date,
+  leaseUntil: Date,
+  error: String,
+  quote: mongoose.Schema.Types.Mixed
+});
+exports.riskSourceModel = mongoose.model('riskSource', riskSourceSchema);
+
+const riskSnapshotSchema = new mongoose.Schema({
+  asset: { type: String, enum: ['BTC'], required: true },
+  methodology: { type: String, required: true },
+  date: { type: String, required: true },
+  observedAt: { type: Date, required: true },
+  sourceVersion: { type: String, required: true },
+  score: { type: Number, required: true },
+  components: mongoose.Schema.Types.Mixed
+});
+riskSnapshotSchema.index({ asset: 1, methodology: 1, date: 1 }, { unique: true });
+exports.riskSnapshotModel = mongoose.model('riskSnapshot', riskSnapshotSchema);

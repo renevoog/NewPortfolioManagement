@@ -1,0 +1,113 @@
+<%- include('partials/header') %>
+<link href="/css/risk.css" rel="stylesheet" />
+
+<section class="risk-page" lang="et" aria-labelledby="risk-title" id="risk-page" aria-busy="true">
+  <div class="risk-heading">
+    <div class="page-head">
+      <span class="risk-eyebrow">PIKAAJALINE TURUTSÜKKEL</span>
+      <h1 id="risk-title">Tururisk</h1>
+      <p>BTC ja ETH ülekuumenemine ajalooliste mõõdikute järgi.</p>
+    </div>
+    <div class="risk-heading-actions">
+      <div class="risk-segment" role="group" aria-label="Vali vara">
+        <button type="button" data-risk-asset="BTC" aria-pressed="true">BTC <span>Bitcoin</span></button>
+        <button type="button" data-risk-asset="ETH" aria-pressed="false">ETH <span>Ethereum</span></button>
+      </div>
+      <button type="button" class="risk-button" id="risk-reload" title="Laadi serveri viimased andmed"><i class="bi bi-arrow-clockwise" aria-hidden="true"></i><span>Uuenda vaadet</span></button>
+    </div>
+  </div>
+
+  <p class="risk-notice">Skoor 0–100 kirjeldab turutsükli ülekuumenemist. See <strong>ei ole hinnalanguse tõenäosus</strong> ega täpse hinna või turutipuga seotud prognoos.</p>
+  <p id="risk-error" class="risk-error" role="alert" hidden></p>
+  <p id="risk-message" class="risk-message" role="status">Laadin riskianalüüsi…</p>
+
+  <div class="risk-summary">
+    <article class="risk-card risk-primary" aria-labelledby="risk-primary-label">
+      <div class="risk-card-top"><h2 id="risk-primary-label">BTC · CBBI</h2><span class="risk-tag" id="risk-primary-state">Laadimisel</span></div>
+      <div class="risk-score"><strong id="risk-primary-score">—</strong><span>/ 100</span></div>
+      <p id="risk-primary-description" class="risk-muted">Ametlik avaldatud CBBI.</p>
+      <div class="risk-meter" aria-hidden="true"><span id="risk-meter-marker" hidden></span></div>
+      <div class="risk-meter-labels"><span>0 · madal</span><span>50 · neutraalne</span><span>100 · kõrge</span></div>
+      <p class="risk-footnote" id="risk-primary-date">Andmete kuupäev: —</p>
+    </article>
+    <article class="risk-card" aria-labelledby="risk-price-label">
+      <div class="risk-card-top"><h2 id="risk-price-label">BTC hind</h2><span class="risk-tag" id="risk-price-state">—</span></div>
+      <div class="risk-price" id="risk-price">—</div>
+      <p class="risk-muted" id="risk-price-source">Hinna allikas: —</p>
+      <p class="risk-footnote" id="risk-price-time">Hinna aeg: —</p>
+      <p class="risk-footnote">Hind on USD-des. Päevaskoor kasutab lõpetatud UTC päevade andmeid.</p>
+    </article>
+    <article class="risk-card" aria-labelledby="risk-technical-label">
+      <div class="risk-card-top"><h2 id="risk-technical-label">Technical Risk</h2><span class="risk-tag" id="risk-technical-state">—</span></div>
+      <div class="risk-score risk-score-small"><strong id="risk-technical-score">—</strong><span>/ 100</span></div>
+      <p class="risk-muted" id="risk-technical-description">Iseseisev trendi, momentumi ja võimalusel MVRV mudel.</p>
+      <p class="risk-footnote" id="risk-technical-date">Andmete kuupäev: —</p>
+      <p class="risk-footnote" id="risk-technical-weights">Kaalud: —</p>
+    </article>
+  </div>
+
+  <section class="risk-card risk-chart-card" aria-labelledby="risk-chart-title">
+    <div class="risk-chart-heading">
+      <div><h2 id="risk-chart-title">Risk ja hind ajas</h2><p class="risk-muted" id="risk-history-note">CBBI ajalugu on tänase metoodikaga ümber arvutatud.</p></div>
+      <div class="risk-chart-selects">
+        <label id="risk-model-label">Mõõdik<select id="risk-model"><option value="cbbi">CBBI</option><option value="technical">Technical Risk</option></select></label>
+        <label id="risk-history-label">CBBI ajalugu<select id="risk-history"><option value="recalibrated">Tänane metoodika</option><option value="snapshots">Salvestatud päevaskoorid</option></select></label>
+      </div>
+    </div>
+    <div class="risk-chart-toolbar">
+      <div class="risk-segment risk-periods" role="group" aria-label="Graafiku periood">
+        <button type="button" data-risk-period="1" aria-pressed="false">1 aasta</button>
+        <button type="button" data-risk-period="3" aria-pressed="false">3 aastat</button>
+        <button type="button" data-risk-period="5" aria-pressed="false">5 aastat</button>
+        <button type="button" data-risk-period="all" aria-pressed="true">Kogu ajalugu</button>
+      </div>
+      <div class="risk-zoom" role="group" aria-label="Graafiku suum">
+        <button type="button" class="risk-button" id="risk-zoom-in" aria-label="Suumi sisse" title="Suumi sisse">+</button>
+        <button type="button" class="risk-button" id="risk-zoom-out" aria-label="Suumi välja" title="Suumi välja">−</button>
+        <button type="button" class="risk-button" id="risk-zoom-reset">Lähtesta</button>
+      </div>
+    </div>
+    <div class="risk-date-range">
+      <label>Algus<input type="date" id="risk-date-start" aria-label="Graafiku alguskuupäev" /></label>
+      <span aria-hidden="true">–</span>
+      <label>Lõpp<input type="date" id="risk-date-end" aria-label="Graafiku lõppkuupäev" /></label>
+      <span class="risk-footnote">Suumimiseks vali kuupäevad või kasuta +/− nuppe.</span>
+    </div>
+    <p id="risk-chart-error" class="risk-error" role="alert" hidden></p>
+    <div class="risk-chart-wrap"><canvas id="risk-chart" role="img" aria-label="Riskiskoori ja vara hinna ajalugu"></canvas><p class="risk-chart-empty" id="risk-chart-empty">Ajalugu laaditakse…</p></div>
+    <fieldset class="risk-components-picker"><legend>Komponendid graafikul</legend><div id="risk-component-picks"></div></fieldset>
+    <p class="risk-footnote">Risk vasakul skaalal 0–100; hind paremal logaritmilisel USD skaalal. Katkendlik joon tähistab ainult hinnal põhinevat Technical Riski. Puuduvaid väärtusi ei ühendata.</p>
+  </section>
+
+  <section class="risk-card" aria-labelledby="risk-components-title">
+    <div class="risk-card-top"><h2 id="risk-components-title">Mõõdiku komponendid</h2><span class="risk-footnote" id="risk-components-date"></span></div>
+    <div class="risk-components-table-wrap" tabindex="0" role="region" aria-label="Riskikomponendid ja nende selgitused">
+      <table class="risk-components-table"><thead><tr><th scope="col">Indikaator</th><th scope="col">Väärtus</th><th scope="col">Skoor / 100</th><th scope="col">Kaal</th></tr></thead><tbody id="risk-components-body"></tbody></table>
+    </div>
+    <p class="risk-footnote" id="risk-components-note"></p>
+  </section>
+
+  <details class="risk-card risk-methods">
+    <summary>Metoodika, võrdlusnäitajad ja piirangud</summary>
+    <div class="risk-method-grid">
+      <div><h3>Technical Risk</h3><p>Hinnatrend on <code>ln(hind / SMA730)</code>. 730 järjestikuse UTC päeva keskmine aitab võrrelda hinda pikaajalise trendiga. Kõrge väärtus tähendab suuremat kõrvalekallet, kuid ei määra tipu aega.</p><p>RSI kasutab 14 lõpetatud nädala hinnaliikumisi ja Wilderi silumist. Kõrge RSI viitab tugevale tõusumomendumile, mis võib püsida kaua. 200 nädala keskmine on täiendav võrdlusnäitaja, mitte skoori lisakomponent.</p><p>Komponendid normaliseeritakse ainult varasemate vaatluste põhjal. Täismudeli esialgsed kaalud on trend 40%, momentum 25% ja MVRV 35%. Need on hüpoteesid. MVRV puudumisel on eraldi <strong>Price-only Technical Risk</strong> kaaludega 61,54% ja 38,46%; see ei ole täismudeliga samaväärne.</p></div>
+      <div><h3>On-chain ja CBBI</h3><p>MVRV = turukapitalisatsioon / realiseeritud kapitalisatsioon. Realiseeritud kapitalisatsioon hindab ühikuid nende viimase ahelasisese liikumise hinna järgi; see ei ole teadaolev investorite tegelik ostuhind. BTC UTXO- ja ETH kontopõhine arvestus ei ole identsed.</p><p>MVRV Z-Score = (turukapitalisatsioon − realiseeritud kapitalisatsioon) / turukapitalisatsiooni seni vaadeldud väärtuste standardhälve. Puuduvate algandmete korral jäävad mõlemad näitajad tühjaks.</p><p>CBBI on eraldi BTC mõõdik. Ametlik ajalugu võib tsüklite järel muutuda ega tõenda, millist skoori minevikus avaldati. „Salvestatud päevaskoorid” näitab üksnes selle rakenduse edaspidi salvestatud vaatlusi. CBBI-d ja Technical Riski ei liideta kolmandaks indeksiks.</p></div>
+    </div>
+    <dl class="risk-facts" id="risk-method-facts"></dl>
+    <p class="risk-footnote" id="risk-normalization"></p>
+    <p class="risk-footnote" id="risk-sensitivity"></p>
+    <p class="risk-footnote" id="risk-sensitivity-history"></p>
+    <p class="risk-footnote" id="risk-comparison"></p>
+    <ul class="risk-limitations" id="risk-limitations"></ul>
+  </details>
+
+  <section class="risk-card" aria-labelledby="risk-sources-title">
+    <div class="risk-card-top"><h2 id="risk-sources-title">Andmeallikad</h2><span class="risk-footnote" id="risk-next-update"></span></div>
+    <div class="risk-sources" id="risk-sources"></div>
+    <p class="risk-footnote">Coin Metrics Community andmed: <a href="https://creativecommons.org/licenses/by-nc/4.0/" target="_blank" rel="noopener noreferrer">CC BY-NC 4.0</a>. Arvutused ja normaliseerimine on selle rakenduse teisendused.</p>
+    <p class="risk-footnote">Server kogub andmeid perioodiliselt. Vaate uuendamine loeb olemasolevat vahemälu ega käivita kogu ajaloo allalaadimist.</p>
+  </section>
+</section>
+
+<script src="/js/risk.js"></script>
+<%- include('partials/footer') %>

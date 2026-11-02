@@ -1714,3 +1714,16 @@ main.container-lg {
   .sharpe-actions { justify-content: stretch; }
   .btn-run { width: 100%; justify-content: center; }
 }
+
+/* Keep the complete navigation reachable when a fourth tab is present. */
+@media (max-width: 600px) {
+  .navbar .container-lg { position: relative; }
+  .navbar-left { width: 100%; flex-wrap: wrap; gap: 9px; }
+  .navbar-brand { flex: 1 1 100%; padding-right: 38px; }
+  .nav-tabs-bar { width: 100%; justify-content: space-between; gap: 2px; }
+  .nav-tab { padding: 6px 7px; font-size: .72rem; gap: 4px; }
+  .nav-tab span { display: inline; }
+  .nav-tab i { font-size: .85rem; }
+  .navbar-user { position: absolute; right: 14px; top: 5px; }
+  .navbar-user-name { display: none; }
+}
