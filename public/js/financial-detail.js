@@ -153,14 +153,10 @@
           var value = dataset.data[index];
           var missing = !Number.isFinite(value);
           var end = missing ? chart.scales.y.getPixelForValue(0) : bar.y;
-          var labelY = !missing && value < 0 ? end + 12 : end - 26;
+          var labelY = !missing && value < 0 ? end + 12 : end - 12;
           ctx.font = "600 11px 'Exo', sans-serif";
           ctx.fillStyle = missing ? '#94a3b8' : dataset.borderColor;
           ctx.fillText(missing ? '\u2014' : compactValue(value), bar.x, labelY);
-          ctx.font = "10px 'Exo', sans-serif";
-          ctx.fillStyle = '#94a3b8';
-          // The provider supplies EPS consensus, not revenue/net-income estimates.
-          ctx.fillText('Est. \u2014', bar.x, labelY + 14);
         });
       });
       ctx.restore();
@@ -350,7 +346,7 @@
       html += '<div class="detail-chart-scroll"><div class="detail-chart-wrap">'
         + '<canvas id="chart-' + symbol + '" role="img" aria-label="Revenue and net income by period, with value labels"></canvas>'
         + '</div></div>'
-        + '<p class="detail-estimate-note">Bar labels show actual results. <span class="detail-estimate-unavailable">Est. \u2014</span> = revenue or net income estimate unavailable.</p>'
+        + '<p class="detail-estimate-note">Bar labels show actual results. Revenue and net income estimates are unavailable.</p>'
         + epsComparisonsHTML(periods, view);
     }
 

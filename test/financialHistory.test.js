@@ -151,7 +151,7 @@ test('detail shows values and EPS statuses, with an unavailable comparison for p
   assert.match(panel.innerHTML, /Actual <strong class="detail-estimate-unavailable">—<\/strong>/);
   assert.match(panel.innerHTML, /Est\. <strong>-0\.665<\/strong>/);
   assert.match(panel.innerHTML, /Adjusted EPS/);
-  assert.match(panel.innerHTML, /Est\. —/);
+  assert.doesNotMatch(panel.innerHTML, /Est\. —/);
   const config = charts[0].config;
   assert.equal(config.data.datasets[0].data[0], 100e6);
   assert.equal(config.data.datasets[1].data[0], -10e6);
@@ -181,13 +181,10 @@ test('bar labels sit outside positive and negative bars, render missing values, 
     scales: { y: { getPixelForValue: () => 150 } }
   };
   plugin.afterDatasetsDraw(chart);
-  assert.equal(draws.length, 8);
-  assert.deepEqual(draws.slice(0, 4).map(({ text }) => text), ['100.0M', 'Est. —', '-10.0M', 'Est. —']);
-  assert.ok(draws[0].y < 80 && draws[1].y < 80);
-  assert.ok(draws[2].y > 200 && draws[3].y > 200);
-  assert.equal(draws[4].text, '—');
-  assert.equal(draws[4].color, '#94a3b8');
-  assert.equal(draws[6].text, '0');
+  assert.deepEqual(draws.map(({ text }) => text), ['100.0M', '-10.0M', '—', '0']);
+  assert.ok(draws[0].y < 80);
+  assert.ok(draws[1].y > 200);
+  assert.equal(draws[2].color, '#94a3b8');
 });
 
 test('yearly-only history opens the available view', async () => {
