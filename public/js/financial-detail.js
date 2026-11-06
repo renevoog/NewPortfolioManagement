@@ -92,6 +92,81 @@
       : data.quarterly.periods;
   }
 
+  function fmtEps(value) {
+    return Number.isFinite(value)
+      ? value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 4 })
+      : '\u2014';
+  }
+
+  function epsValueHTML(value) {
+    return '<strong' + (Number.isFinite(value) ? '' : ' class="detail-estimate-unavailable"') + '>'
+      + fmtEps(value) + '</strong>';
+  }
+
+  function epsComparisonsHTML(periods, view) {
+    var html = '<div class="detail-estimates">'
+      + '<div class="detail-estimates-title">EPS vs estimate <span>Earnings per share</span></div>'
+      + '<div class="detail-estimates-grid">';
+    periods.forEach(function (period) {
+      // Quarterly EPS must never be reused as a full-year comparison.
+      var comparison = view === 'yearly' ? null : period.epsComparison;
+      var result = comparison && comparison.result;
+      var badge = '<span class="detail-estimate-unavailable" title="No matching actual and estimate" aria-label="Comparison unavailable">\u2014</span>';
+      if (result) {
+        var text = result === 'beat' ? 'Beat' : result === 'miss' ? 'Miss' : 'Met';
+        if (result !== 'met') {
+          if (Number.isFinite(comparison.surprisePercent)) {
+            text += Math.abs(comparison.surprisePercent) < 0.1
+              ? ' <0.1%' : ' ' + fmtChange(comparison.surprisePercent);
+          } else {
+            text += ' ' + (comparison.difference > 0 ? '+' : '') + fmtEps(comparison.difference) + ' / share';
+          }
+        }
+        badge = '<span class="detail-estimate-badge detail-estimate-' + esc(result) + '">' + esc(text) + '</span>';
+      }
+      var currency = comparison && comparison.currency ? ' \u00b7 ' + esc(comparison.currency) : '';
+      var methodology = comparison && comparison.methodology;
+      var basis = methodology === 'nongaap' ? 'Adjusted EPS' : methodology === 'gaap' ? 'GAAP EPS' : 'EPS';
+      html += '<div class="detail-estimate-period">'
+        + '<div class="detail-estimate-period-header"><span>' + esc(period.label) + '</span>' + badge + '</div>'
+        + '<div class="detail-estimate-values"><span>Actual ' + epsValueHTML(comparison && comparison.actual) + '</span>'
+        + '<span>Est. ' + epsValueHTML(comparison && comparison.estimate) + '</span></div>'
+        + '<div class="detail-estimate-basis">' + basis + currency + '</div></div>';
+    });
+    return html + '</div><p class="detail-estimate-note">'
+      + (view === 'yearly' ? 'Annual EPS estimates are unavailable. ' : 'EPS is separate from the net income shown above. ')
+      + 'Beat / Miss compares actual EPS with its estimate; percentages use the absolute estimate. '
+      + '\u2014 means data is unavailable.</p></div>';
+  }
+
+  // Local Chart.js plugin keeps labels visible without another dependency.
+  var barLabels = {
+    id: 'financialBarLabels',
+    afterDatasetsDraw: function (chart) {
+      var ctx = chart.ctx;
+      ctx.save();
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      chart.data.datasets.forEach(function (dataset, datasetIndex) {
+        if (!chart.isDatasetVisible(datasetIndex)) return;
+        chart.getDatasetMeta(datasetIndex).data.forEach(function (bar, index) {
+          var value = dataset.data[index];
+          var missing = !Number.isFinite(value);
+          var end = missing ? chart.scales.y.getPixelForValue(0) : bar.y;
+          var labelY = !missing && value < 0 ? end + 12 : end - 26;
+          ctx.font = "600 11px 'Exo', sans-serif";
+          ctx.fillStyle = missing ? '#94a3b8' : dataset.borderColor;
+          ctx.fillText(missing ? '\u2014' : compactValue(value), bar.x, labelY);
+          ctx.font = "10px 'Exo', sans-serif";
+          ctx.fillStyle = '#94a3b8';
+          // The provider supplies EPS consensus, not revenue/net-income estimates.
+          ctx.fillText('Est. \u2014', bar.x, labelY + 14);
+        });
+      });
+      ctx.restore();
+    }
+  };
+
   // ---- Build latest-period summary HTML ----------------------
   function latestSummaryHTML(periods) {
     if (!periods || periods.length < 2) return '';
@@ -255,7 +330,8 @@
       html += '<div class="detail-header">'
         + '<div class="detail-title">'
         + '<span class="detail-title-text">Financial performance</span>'
-        + '<span class="detail-source">Source: ' + (data.source || 'Yahoo Finance') + '</span>'
+        + '<span class="detail-source">Source: ' + esc(data.source || 'Yahoo Finance')
+        + (data.financialCurrency ? ' \u00b7 ' + esc(data.financialCurrency) : '') + '</span>'
         + '</div>';
 
       if (hasQ && hasY) {
@@ -271,9 +347,11 @@
 
       html += latestSummaryHTML(periods);
 
-      html += '<div class="detail-chart-wrap">'
-        + '<canvas id="chart-' + symbol + '"></canvas>'
-        + '</div>';
+      html += '<div class="detail-chart-scroll"><div class="detail-chart-wrap">'
+        + '<canvas id="chart-' + symbol + '" role="img" aria-label="Revenue and net income by period, with value labels"></canvas>'
+        + '</div></div>'
+        + '<p class="detail-estimate-note">Bar labels show actual results. <span class="detail-estimate-unavailable">Est. \u2014</span> = revenue or net income estimate unavailable.</p>'
+        + epsComparisonsHTML(periods, view);
     }
 
     // Analyst sentiment card
@@ -310,6 +388,7 @@
     var ctx = canvas.getContext('2d');
     charts[symbol] = new Chart(ctx, {
       type: 'bar',
+      plugins: [barLabels],
       data: {
         labels: labels,
         datasets: [
@@ -338,6 +417,7 @@
       options: {
         responsive: true,
         maintainAspectRatio: false,
+        layout: { padding: { top: 8, bottom: 10, left: 8, right: 8 } },
         interaction: {
           mode: 'index',
           intersect: false
@@ -384,8 +464,9 @@
                   change = period.netIncomeChange;
                 }
                 var formatted = fmtChange(change);
-                if (!formatted) return '';
-                return '    vs prev: ' + formatted;
+                var lines = ['    Estimate: unavailable'];
+                if (formatted) lines.push('    vs prev: ' + formatted);
+                return lines;
               }
             }
           }
@@ -399,6 +480,8 @@
             }
           },
           y: {
+            beginAtZero: true,
+            grace: '20%',
             grid: { color: 'rgba(226, 229, 234, 0.6)' },
             ticks: {
               font: { family: "'Exo', sans-serif", size: 11 },
@@ -462,7 +545,7 @@
           return;
         }
 
-        if (!activeView[symbol]) activeView[symbol] = 'quarterly';
+        if (!activeView[symbol]) activeView[symbol] = hasQ ? 'quarterly' : 'yearly';
         var view = activeView[symbol];
         panel.innerHTML = panelHTML(symbol, data, view);
         renderChart(symbol, data, view);

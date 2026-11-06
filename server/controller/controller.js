@@ -302,6 +302,7 @@ exports.new_debugStocksController_GET = async(req, res, next) => {
 
 // Session cache TTL for financial detail
 const DETAIL_CACHE_TTL = 10 * 60 * 1000; // 10 minutes
+const DETAIL_CACHE_VERSION = 2;
 
 // GET /api/assets/:symbol/financial-history — lazy-loaded financial detail
 exports.new_financialHistoryController_GET = async(req, res, next) => {
@@ -316,14 +317,14 @@ exports.new_financialHistoryController_GET = async(req, res, next) => {
     // Check session cache
     if (!req.session.detailCache) req.session.detailCache = {};
     const cached = req.session.detailCache[sym];
-    if (cached && cached.ts && (Date.now() - cached.ts) < DETAIL_CACHE_TTL) {
+    if (cached && cached.version === DETAIL_CACHE_VERSION && cached.ts && (Date.now() - cached.ts) < DETAIL_CACHE_TTL) {
       return res.json(cached.data);
     }
 
     const data = await getFinancialHistory(sym);
 
     // Store in session
-    req.session.detailCache[sym] = { data: data, ts: Date.now() };
+    req.session.detailCache[sym] = { data: data, ts: Date.now(), version: DETAIL_CACHE_VERSION };
 
     res.json(data);
   } catch (err) {

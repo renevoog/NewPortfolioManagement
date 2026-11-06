@@ -1000,9 +1000,36 @@ main.container-lg {
 /* --- Chart wrapper ----------------------------------------- */
 .detail-chart-wrap {
   position: relative;
-  height: 260px;
+  height: 320px;
   width: 100%;
+  min-width: 640px;
 }
+
+.detail-chart-scroll { overflow-x: auto; }
+
+.detail-estimates {
+  margin-top: 16px;
+  padding: 14px 16px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--card-bg);
+}
+
+.detail-estimates-title { font-size: 0.82rem; font-weight: 600; margin-bottom: 12px; }
+.detail-estimates-title > span { font-size: 0.72rem; font-weight: 400; color: var(--text-muted); margin-left: 8px; }
+.detail-estimates-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 12px 20px; }
+.detail-estimate-period { min-width: 0; }
+.detail-estimate-period-header { display: flex; justify-content: space-between; align-items: center; gap: 8px; font-size: 0.76rem; font-weight: 600; }
+.detail-estimate-badge { padding: 2px 6px; border-radius: 4px; font-size: 0.72rem; white-space: nowrap; }
+.detail-estimate-beat { background: #dcfce7; color: #15803d; }
+.detail-estimate-miss { background: #fee2e2; color: #b91c1c; }
+.detail-estimate-met { background: #f1f5f9; color: #475569; }
+.detail-estimate-unavailable { color: #94a3b8; }
+.detail-estimate-values { display: flex; flex-wrap: wrap; gap: 4px 14px; margin-top: 7px; color: var(--text-muted); font-size: 0.74rem; }
+.detail-estimate-values strong { color: var(--text); font-weight: 500; }
+.detail-estimate-values .detail-estimate-unavailable { color: #94a3b8; }
+.detail-estimate-basis { margin-top: 4px; font-size: 0.68rem; color: var(--text-muted); }
+.detail-estimate-note { margin: 10px 0 0; font-size: 0.7rem; color: var(--text-muted); line-height: 1.5; }
 
 /* --- Detail loader (inline, smaller) ----------------------- */
 .detail-loader {

@@ -1,5 +1,5 @@
 // Yahoo Finance — expanded detail service
-// Fetches financial history + analyst consensus in a SINGLE quoteSummary call.
+// Fetches financial history + analyst consensus, with optional EPS estimates.
 // Modules: incomeStatementHistory, incomeStatementHistoryQuarterly,
 //          financialData, recommendationTrend
 
@@ -8,36 +8,35 @@ const { getYahooSymbol } = require('../symbolMap');
 
 // Extract raw value from Yahoo's nested {raw, fmt} format
 const rawVal = (v) => {
-  if (v === null || v === undefined) return null;
-  if (typeof v === 'object' && 'raw' in v) return v.raw;
-  if (typeof v === 'number') return v;
-  return null;
+  const value = v && typeof v === 'object' ? v.raw : v;
+  return typeof value === 'number' && Number.isFinite(value) ? value : null;
 };
 
 // Convert epoch seconds to ISO date string
 const epochToDate = (v) => {
   const raw = rawVal(v);
   if (!raw) return null;
-  return new Date(raw * 1000).toISOString().split('T')[0];
+  const date = new Date(raw * 1000);
+  return Number.isNaN(date.getTime()) ? null : date.toISOString().split('T')[0];
 };
 
 // Derive a human-readable quarter label from a date string: "Q4 2024"
 const quarterLabel = (dateStr) => {
   if (!dateStr) return '?';
   const d = new Date(dateStr);
-  const month = d.getMonth() + 1;
+  const month = d.getUTCMonth() + 1;
   let q;
   if (month <= 3) q = 1;
   else if (month <= 6) q = 2;
   else if (month <= 9) q = 3;
   else q = 4;
-  return 'Q' + q + ' ' + d.getFullYear();
+  return 'Q' + q + ' ' + d.getUTCFullYear();
 };
 
 // Derive a year label from a date string: "2024"
 const yearLabel = (dateStr) => {
   if (!dateStr) return '?';
-  return String(new Date(dateStr).getFullYear());
+  return String(new Date(dateStr).getUTCFullYear());
 };
 
 // Normalize one income statement entry
@@ -82,6 +81,38 @@ const safePercentChange = (current, previous) => {
   if (previous === null || previous === undefined) return null;
   if (Math.abs(previous) < 1000) return null;
   return ((current - previous) / Math.abs(previous)) * 100;
+};
+
+// Match the exact period end, never the fiscal-quarter label or array order.
+// Yahoo's historical consensus is EPS, not the net income shown by the bars.
+const addEpsComparisons = (periods, earningsHistory) => {
+  const history = earningsHistory && Array.isArray(earningsHistory.history)
+    ? earningsHistory.history : [];
+  const byDate = new Map();
+  for (const entry of history) {
+    const date = epochToDate(entry.quarter);
+    if (date) byDate.set(date, entry);
+  }
+  return periods.map((period) => {
+    const entry = byDate.get(period.date);
+    const actual = rawVal(entry && entry.epsActual);
+    const estimate = rawVal(entry && entry.epsEstimate);
+    const difference = actual !== null && estimate !== null ? actual - estimate : null;
+    return {
+      ...period,
+      epsComparison: entry ? {
+        actual,
+        estimate,
+        difference,
+        // An absolute denominator makes a smaller loss a beat. Zero has no percentage.
+        surprisePercent: difference !== null && estimate !== 0
+          ? difference / Math.abs(estimate) * 100 : null,
+        result: difference === null ? null : difference > 0 ? 'beat' : difference < 0 ? 'miss' : 'met',
+        currency: entry.currency || null,
+        methodology: earningsHistory.defaultMethodology || null
+      } : null
+    };
+  });
 };
 
 // ---- Rating key normalization ----
@@ -172,8 +203,8 @@ const extractSigDevs = (insightsData) => {
 const getFinancialHistory = async (tvSymbol) => {
   const yahooSymbol = getYahooSymbol(tvSymbol) || tvSymbol;
 
-  // Fetch quoteSummary and insights in parallel
-  const [summary, insightsData] = await Promise.all([
+  // Optional estimates must not prevent the financial statements from loading.
+  const [summary, insightsData, estimates] = await Promise.all([
     quoteSummary(yahooSymbol, {
       modules: [
         'incomeStatementHistory',
@@ -182,7 +213,8 @@ const getFinancialHistory = async (tvSymbol) => {
         'recommendationTrend'
       ]
     }),
-    insights(yahooSymbol).catch(() => null) // Non-critical, don't fail on insights error
+    insights(yahooSymbol).catch(() => null),
+    quoteSummary(yahooSymbol, { modules: ['earningsHistory'] }).catch(() => ({}))
   ]);
 
   // ---- Financial history ----
@@ -194,9 +226,9 @@ const getFinancialHistory = async (tvSymbol) => {
     && summary.incomeStatementHistoryQuarterly.incomeStatementHistory;
   const quarterlyStatements = Array.isArray(quarterlyRaw) ? quarterlyRaw : [];
 
-  const quarterlyPeriods = addPeriodChanges(sortPeriods(
+  const quarterlyPeriods = addEpsComparisons(addPeriodChanges(sortPeriods(
     quarterlyStatements.map((e) => normalizeEntry(e, quarterLabel))
-  ));
+  )), estimates.earningsHistory);
   const yearlyPeriods = addPeriodChanges(sortPeriods(
     annualStatements.map((e) => normalizeEntry(e, yearLabel))
   ));
@@ -216,6 +248,7 @@ const getFinancialHistory = async (tvSymbol) => {
   return {
     symbol: tvSymbol,
     source: 'yahoo',
+    financialCurrency: summary.financialData && summary.financialData.financialCurrency || null,
     availability: {
       quarterly: hasQuarterly,
       yearly: hasYearly
